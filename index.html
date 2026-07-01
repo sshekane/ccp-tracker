@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCP | Private Credit Reporting Tracker</title>
+<title>CCP | Financial Reporting Tracker (SharePoint Sync)</title>
 <style>
   :root {
     --ccp-primary-navy: #005595;
@@ -173,9 +173,6 @@
   .cal-co-row input[type=checkbox] { width:14px;height:14px;cursor:pointer;accent-color:var(--ccp-primary-navy); }
   .cal-co-swatch { width:10px;height:10px;border-radius:2px;flex-shrink:0; }
 </style>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -191,8 +188,11 @@
     <div class="app-title">PRIVATE CREDIT · FINANCIAL REPORTING TRACKER</div>
   </div>
   <div class="header-right">
-    <span style="font-size:10px;color:#4a7a9b;letter-spacing:0.3px;" id="save-indicator">● Connecting...</span>
+    <span style="font-size:10px;color:#4a7a9b;letter-spacing:0.3px;" id="save-indicator">● Saved locally</span>
     <span style="font-size:11px;color:#aabdd3;padding:4px 10px;border:1px solid #2a4a6a;cursor:pointer;" id="current-user-badge" onclick="promptUserName()" title="Click to change user">👤 <span id="current-user-name">—</span></span>
+    <div style="width:1px;height:24px;background:#2a4a6a;"></div>
+    <button class="btn-secondary" onclick="pullFromSharePoint()" title="Load latest data your colleague pushed to SharePoint">↓ Pull from SharePoint</button>
+    <button class="btn-primary" onclick="pushToSharePoint()" title="Save your data to SharePoint so colleagues can load it">↑ Push to SharePoint</button>
     <div style="width:1px;height:24px;background:#2a4a6a;"></div>
     <button class="btn-secondary" onclick="openAddDeadlineModal()">+ Add Deadline</button>
     <button class="btn-primary" onclick="openAddCompanyModal()">+ Add Company</button>
@@ -394,22 +394,6 @@ Constitution Capital Partners — Private Credit Team</textarea>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
-
-<!-- CUSTOM CONFIRM MODAL -->
-<div class="modal-overlay" id="sp-confirm-modal" style="z-index:9998;">
-  <div class="modal" style="width:420px;">
-    <div class="modal-header" style="background:#fff;">
-      <h3 id="sp-confirm-title">Confirm</h3>
-    </div>
-    <div class="modal-body" style="padding:20px 24px;">
-      <p id="sp-confirm-msg" style="font-size:13px;color:var(--ccp-dark-navy);line-height:1.6;"></p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="spConfirmResolve(false)">Cancel</button>
-      <button class="btn-primary" id="sp-confirm-yes" onclick="spConfirmResolve(true)">Yes, Continue</button>
-    </div>
-  </div>
-</div>
 
 <!-- USER IDENTITY MODAL -->
 <div class="modal-overlay" id="user-modal" style="z-index:2000;">
@@ -852,162 +836,66 @@ let trashBin = [];       // deleted items pending 30-day recovery
 let currentUser = '';    // set on first load via prompt
 let _fsFileHandle = null; // File System Access API handle (set when connected to shared file)
 
-// ─── FIREBASE CONFIGURATION ──────────────────────────────────────────────────
-// ┌──────────────────────────────────────────────────────────────────────────┐
-// │  PASTE YOUR FIREBASE CONFIG HERE after creating your Firebase project    │
-// └──────────────────────────────────────────────────────────────────────────┘
-const firebaseConfig = {
-  apiKey: "AIzaSyAVkkEAaIalLV9t87ig8nH0SiYNz9dgTjU",
-  authDomain: "ccp-tracker-c4f04.firebaseapp.com",
-  projectId: "ccp-tracker-c4f04",
-  storageBucket: "ccp-tracker-c4f04.firebasestorage.app",
-  messagingSenderId: "335584967712",
-  appId: "1:335584967712:web:32eb907d81bd5906c69045"
-};
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+const STORAGE_KEY    = 'ccp_reporting_tracker_v2';
+const STORAGE_KEY_V1 = 'ccp_reporting_tracker_v1';
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-// Firestore collection names
-const COL = {
-  companies:  'companies',
-  deadlines:  'deadlines',
-  settings:   'settings',
-  trash:      'trashBin'
-};
-
-// ─── FIRESTORE READ / WRITE ───────────────────────────────────────────────────
-let _saveQueue   = Promise.resolve();
-let _unsubscribe = []; // real-time listeners
-
-// Write all data to Firestore
-async function fbWrite() {
-  const batch = db.batch();
-  // Companies
-  companies.forEach(function(co) {
-    batch.set(db.collection(COL.companies).doc(String(co.id)), co);
-  });
-  // Deadlines
-  deadlines.forEach(function(d) {
-    batch.set(db.collection(COL.deadlines).doc(String(d.id)), d);
-  });
-  // Settings
-  batch.set(db.collection(COL.settings).doc('main'), settings);
-  // Trash — delete all then rewrite
-  var trashSnap = await db.collection(COL.trash).get();
-  trashSnap.forEach(function(doc) { batch.delete(doc.ref); });
-  trashBin.forEach(function(item, i) {
-    batch.set(db.collection(COL.trash).doc('trash_' + i), item);
-  });
-  await batch.commit();
-}
-
-// Read all data from Firestore
-async function fbRead() {
-  var results = await Promise.all([
-    db.collection(COL.companies).get(),
-    db.collection(COL.deadlines).get(),
-    db.collection(COL.settings).get(),
-    db.collection(COL.trash).get()
-  ]);
-  companies   = results[0].docs.map(function(d) { return d.data(); });
-  deadlines   = results[1].docs.map(function(d) { return d.data(); });
-  trashBin    = results[3].docs.map(function(d) { return d.data(); });
-  var setDoc  = results[2].docs[0];
-  if (setDoc) Object.assign(settings, setDoc.data());
-}
-
-// Start real-time listeners — updates appear instantly for all users
-function startListeners() {
-  _unsubscribe.forEach(function(u) { u(); });
-  _unsubscribe = [];
-
-  _unsubscribe.push(db.collection(COL.companies).onSnapshot(function(snap) {
-    companies = snap.docs.map(function(d) { return d.data(); });
-    renderTracker(); updateAlertBanner(); renderSettings();
-  }));
-
-  _unsubscribe.push(db.collection(COL.deadlines).onSnapshot(function(snap) {
-    deadlines = snap.docs.map(function(d) { return d.data(); });
-    normalizeDueDates();
-    renderTracker(); updateAlertBanner();
-    var calView = document.getElementById('view-calendar');
-    if (calView && calView.classList.contains('active')) renderCalendar();
-  }));
-
-  _unsubscribe.push(db.collection(COL.trash).onSnapshot(function(snap) {
-    trashBin = snap.docs.map(function(d) { return d.data(); });
-    var tab = document.getElementById('trash-tab');
-    if (tab) tab.textContent = trashBin.length > 0 ? ('Trash (' + trashBin.length + ')') : 'Trash';
-  }));
-
-  var ind = document.getElementById('save-indicator');
-  if (ind) { ind.textContent = '● Live sync active'; ind.style.color = '#1D8D90'; }
-}
-
-// saveData: write to Firestore (queued) + localStorage backup
 function saveData() {
-  // localStorage backup so data survives if Firestore is temporarily unavailable
   try {
-    localStorage.setItem('ccp_fb_backup', JSON.stringify({ companies: companies, deadlines: deadlines, settings: settings, trashBin: trashBin }));
-  } catch(e) {}
-
-  _saveQueue = _saveQueue.then(function() {
-    return fbWrite().then(function() {
-      var ind = document.getElementById('save-indicator');
-      if (ind) {
-        ind.textContent = '● Saved';
-        ind.style.color = '#1D8D90';
-        setTimeout(function() {
-          ind.textContent = '● Live sync active';
-          ind.style.color = '#1D8D90';
-        }, 1500);
-      }
-    }).catch(function(e) {
-      console.error('Firestore write error:', e);
-      var ind = document.getElementById('save-indicator');
-      if (ind) { ind.textContent = '● Save error — check console'; ind.style.color = 'var(--negative)'; }
-    });
-  });
+    const snapshot = { companies, deadlines, activityLog, settings, trashBin };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    const ind = document.getElementById('save-indicator');
+    if (_fsFileHandle) {
+      // Connected to shared file — write there silently
+      fsWrite().then(() => {
+        if (ind) { ind.textContent = '● Saved to file'; ind.style.color = '#1D8D90';
+          setTimeout(() => { ind.textContent = '● ' + (_fsFileHandle ? _fsFileHandle.name : 'No shared file'); ind.style.color = '#1D8D90'; }, 1800); }
+      });
+    } else {
+      if (ind) { ind.textContent = '● Saved'; ind.style.color = '#1D8D90';
+        setTimeout(() => { ind.textContent = '● Auto-saved to browser'; ind.style.color = '#4a7a9b'; }, 1500); }
+    }
+    _saveCount = (_saveCount || 0) + 1;
+    if (_saveCount % 10 === 0) saveBackup('auto');
+  } catch(e) { /* storage unavailable — silent fail */ }
 }
 
-function logActivity(type, text) {
-  // Activity log not stored in this version
-}
+let _saveCount = 0;
+const BACKUP_KEY = 'ccp_tracker_backups';
+const MAX_BACKUPS = 10;
 
 function saveBackup(label) {
   try {
-    localStorage.setItem('ccp_fb_backup_' + label, JSON.stringify({
-      companies: companies, deadlines: deadlines, settings: settings, trashBin: trashBin,
-      ts: new Date().toISOString(), label: label
-    }));
+    const backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+    backups.unshift({
+      ts: new Date().toISOString(),
+      label: label || 'manual',
+      user: currentUser || 'Unknown',
+      snapshot: JSON.stringify({ companies, deadlines, activityLog, settings, trashBin })
+    });
+    // Keep only last MAX_BACKUPS
+    if (backups.length > MAX_BACKUPS) backups.length = MAX_BACKUPS;
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
   } catch(e) {}
 }
 
 function restoreBackup(idx) {
-  showToast('Backups are managed by Firebase. Use the Firebase Console to view previous versions.');
+  try {
+    const backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+    const b = backups[idx];
+    if (!b) return;
+    const ts = new Date(b.ts).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    if (!confirm(`Restore backup from ${ts} (saved by ${b.user})? Your current data will be replaced.`)) return;
+    saveBackup('pre-restore'); // save current state before overwriting
+    applySnapshot(JSON.parse(b.snapshot));
+    saveData();
+    normalizeDueDates();
+    checkAllDeadlines();
+    closeModal('data-modal');
+    showToast(`Backup from ${ts} restored.`);
+  } catch(e) { showToast('Restore failed — backup may be corrupt.'); }
 }
 
-function renderBackupList() {
-  var container = document.getElementById('backup-list');
-  if (container) container.innerHTML = '<div style="font-size:12px;color:#8a9bb0;">Backups are automatically managed by Firebase. Visit console.firebase.google.com to view history.</div>';
-}
-
-function clearAllData() {
-  spConfirm('Permanently delete ALL data from Firebase for EVERY user? This cannot be undone.').then(function(ok) {
-    if (!ok) return;
-    Promise.all([
-      db.collection(COL.companies).get().then(function(s) { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); }),
-      db.collection(COL.deadlines).get().then(function(s) { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); }),
-      db.collection(COL.trash).get().then(function(s)     { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); })
-    ]).then(function() {
-      companies = []; deadlines = []; trashBin = [];
-      renderTracker(); updateAlertBanner();
-      showToast('All data cleared from Firebase.');
-    });
-  });
-}
 function applySnapshot(saved) {
   if (saved.companies)   companies   = saved.companies;
   if (saved.deadlines)   deadlines   = saved.deadlines;
@@ -2244,24 +2132,365 @@ function openDataModal() {
 
 function exportJSON() { saveToFile(); }
 
+// ─── FILE SYSTEM ACCESS API (auto sync to shared file) ───────────────────────
+// When connected, every saveData() silently writes to the shared .json file.
+// On next open, the app auto-loads from it. Works in Chrome/Edge on a network drive.
+// Falls back to manual download/upload in other browsers.
 
-// ─── CUSTOM CONFIRM (avoids browser confirm() issues) ───────────────────────
-let _spConfirmResolve = null;
-function spConfirm(msg) {
-  return new Promise(function(resolve) {
-    document.getElementById('sp-confirm-msg').textContent = msg;
-    var yesBtn = document.getElementById('sp-confirm-yes');
-    if (yesBtn) {
-      yesBtn.style.background = /delete|clear|remove|permanently/i.test(msg) ? 'var(--negative)' : '';
-      yesBtn.textContent = /delete|clear|remove|permanently/i.test(msg) ? 'Yes, Delete' : 'Yes, Continue';
-    }
-    document.getElementById('sp-confirm-modal').classList.add('open');
-    _spConfirmResolve = resolve;
+// _fsFileHandle is declared at the top of the script
+const FS_HANDLE_KEY = 'ccp_fs_handle_name'; // we store the filename hint only
+
+async function fsConnect() {
+  // Check if File System Access API is available
+  if (!window.showOpenFilePicker && !window.showSaveFilePicker) {
+    showToast('Your browser does not support automatic file sync. Use Chrome or Edge.');
+    return;
+  }
+  const action = await new Promise(resolve => {
+    const choice = confirm(
+      'Connect to a shared data file on your network drive.\n\n' +
+      'Click OK to open an existing CCP_Tracker_data.json file.\n' +
+      'Click Cancel to create a new data file.\n\n' +
+      'After connecting, all changes save automatically.'
+    );
+    resolve(choice ? 'open' : 'create');
   });
+
+  try {
+    if (action === 'open') {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'CCP Tracker Data', accept: { 'application/json': ['.json'] } }],
+        multiple: false
+      });
+      _fsFileHandle = handle;
+      // Read and load the file
+      const file = await handle.getFile();
+      const text = await file.text();
+      const data = JSON.parse(text);
+      saveBackup('pre-fs-connect');
+      applySnapshot(data);
+      saveData();
+      normalizeDueDates();
+      checkAllDeadlines();
+      localStorage.setItem(FS_HANDLE_KEY, handle.name);
+      fsUpdateStatus(handle.name);
+      showToast('Connected to ' + handle.name + ' — data loaded and will auto-save.');
+    } else {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'CCP_Tracker_data.json',
+        types: [{ description: 'CCP Tracker Data', accept: { 'application/json': ['.json'] } }]
+      });
+      _fsFileHandle = handle;
+      localStorage.setItem(FS_HANDLE_KEY, handle.name);
+      fsUpdateStatus(handle.name);
+      await fsWrite(); // write current data immediately
+      showToast('New data file created at ' + handle.name + ' — will auto-save from now on.');
+    }
+  } catch(e) {
+    if (e.name !== 'AbortError') showToast('File connect failed: ' + e.message);
+  }
 }
-function spConfirmResolve(result) {
-  document.getElementById('sp-confirm-modal').classList.remove('open');
-  if (_spConfirmResolve) { _spConfirmResolve(result); _spConfirmResolve = null; }
+
+async function fsWrite() {
+  if (!_fsFileHandle) return;
+  try {
+    const perm = await _fsFileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      const req = await _fsFileHandle.requestPermission({ mode: 'readwrite' });
+      if (req !== 'granted') { fsDisconnect('Permission denied'); return; }
+    }
+    const snapshot = {
+      companies, deadlines, activityLog, settings, trashBin,
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUser || 'Unknown',
+      version: 'ccp-tracker-v2'
+    };
+    const writable = await _fsFileHandle.createWritable();
+    await writable.write(JSON.stringify(snapshot, null, 2));
+    await writable.close();
+  } catch(e) {
+    console.warn('Auto file write failed:', e.message);
+    // Don't toast on every failure — it would be noisy
+    if (e.name === 'NotAllowedError') fsDisconnect('File access lost');
+  }
+}
+
+async function fsTryAutoLoad() {
+  // On open, if we have a remembered file handle, try to re-connect silently.
+  // The browser requires the user to have interacted with the page first,
+  // so we trigger this on the first click anywhere.
+  const hint = localStorage.getItem(FS_HANDLE_KEY);
+  if (!hint || _fsFileHandle) return;
+  // We can't re-open the file without user gesture on first load,
+  // but we can show a banner prompting reconnect.
+  fsShowReconnectBanner(hint);
+}
+
+function fsShowReconnectBanner(filename) {
+  // Show a non-intrusive banner under the header
+  if (document.getElementById('fs-reconnect-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'fs-reconnect-banner';
+  banner.style.cssText = 'background:#e8f0f8;border-bottom:1px solid var(--ccp-rule);padding:6px 28px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ccp-dark-navy);';
+  banner.innerHTML =
+    '<span>📂 Last session used <strong>' + filename + '</strong> as the shared data file.</span>' +
+    '<button class="btn-primary btn-sm" onclick="fsReconnect()">Reconnect & Load Latest</button>' +
+    '<button class="btn-icon btn-sm" onclick="fsDismissBanner()">Dismiss</button>';
+  const nav = document.querySelector('.nav-tabs');
+  if (nav) nav.parentNode.insertBefore(banner, nav.nextSibling);
+}
+
+async function fsReconnect() {
+  // User clicked the reconnect banner — show the file picker
+  if (!window.showOpenFilePicker) { fsDismissBanner(); return; }
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'CCP Tracker Data', accept: { 'application/json': ['.json'] } }],
+      multiple: false
+    });
+    _fsFileHandle = handle;
+    const file = await handle.getFile();
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const coCount = (data.companies || []).length;
+    const dlCount = (data.deadlines || []).length;
+    saveBackup('pre-reconnect');
+    applySnapshot(data);
+    saveData();
+    normalizeDueDates();
+    checkAllDeadlines();
+    localStorage.setItem(FS_HANDLE_KEY, handle.name);
+    fsUpdateStatus(handle.name);
+    fsDismissBanner();
+    showToast('Reconnected to ' + handle.name + ' — ' + coCount + ' companies, ' + dlCount + ' deadlines loaded.');
+  } catch(e) {
+    if (e.name !== 'AbortError') showToast('Reconnect failed: ' + e.message);
+  }
+}
+
+function fsDismissBanner() {
+  const b = document.getElementById('fs-reconnect-banner');
+  if (b) b.remove();
+}
+
+function fsDisconnect(reason) {
+  _fsFileHandle = null;
+  localStorage.removeItem(FS_HANDLE_KEY);
+  fsUpdateStatus(null);
+  if (reason) showToast('File sync disconnected: ' + reason);
+}
+
+function fsUpdateStatus(filename) {
+  const el = document.getElementById('fs-status');
+  const btn = document.getElementById('fs-connect-btn');
+  if (filename) {
+    if (el) { el.textContent = '● ' + filename; el.style.color = '#1D8D90'; }
+    if (btn) { btn.textContent = '✕ Disconnect'; btn.onclick = () => fsDisconnect('Disconnected by user'); btn.title = 'Stop auto-saving to this file'; }
+  } else {
+    if (el) { el.textContent = '● No shared file'; el.style.color = '#4a7a9b'; }
+    if (btn) { btn.textContent = '⟳ Connect to File'; btn.onclick = fsConnect; btn.title = 'Connect to a shared .json file on a network drive'; }
+  }
+}
+
+function saveToFile() {
+  // Manual download (fallback for non-Chrome or when not connected)
+  const snapshot = {
+    companies, deadlines, activityLog, settings, trashBin,
+    exportedAt: new Date().toISOString(),
+    exportedBy: currentUser || 'Unknown',
+    version: 'ccp-tracker-v2'
+  };
+  const dateStr = new Date().toISOString().split('T')[0];
+  const userStr = (currentUser || 'export').replace(/[^a-z0-9]/gi, '_');
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'CCP_Tracker_' + dateStr + '_' + userStr + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showToast('Saved to Downloads. Share this .json with colleagues.');
+}
+
+
+function loadFromFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  // Reset the input so the same file can be loaded again if needed
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const coCount = (data.companies || []).length;
+      const dlCount = (data.deadlines || []).length;
+      const exportedAt = data.exportedAt
+        ? new Date(data.exportedAt).toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'})
+        : 'unknown date';
+      const exportedBy = data.exportedBy || 'Unknown';
+      const msg = 'Load file from ' + exportedBy + ' (' + exportedAt + ')?\n\n' +
+        'Contains: ' + coCount + ' companies, ' + dlCount + ' deadlines.\n\n' +
+        'This will REPLACE your current data. Your current data will be backed up first.';
+      if (!confirm(msg)) return;
+      saveBackup('pre-file-load');
+      applySnapshot(data);
+      saveData();
+      normalizeDueDates();
+      checkAllDeadlines();
+      showToast('Loaded ' + coCount + ' companies and ' + dlCount + ' deadlines from file.');
+    } catch(err) {
+      alert('Could not read file — make sure it is a valid CCP Tracker .json file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleJSONImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const status = document.getElementById('json-import-status');
+      const coCount = (data.companies || []).length;
+      const dlCount = (data.deadlines || []).length;
+      const exportedAt = data.exportedAt ? new Date(data.exportedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'unknown';
+      const exportedBy = data.exportedBy || 'Unknown';
+      window._pendingImport = data;
+      status.innerHTML = '<div style="padding:10px;background:#e0f5f1;border:1px solid var(--positive);font-size:12px;margin-top:8px;">' +
+        '<strong>Ready to import:</strong> ' + coCount + ' companies, ' + dlCount + ' deadlines<br>' +
+        '<span style="color:#8a9bb0;font-size:11px;">Saved ' + exportedAt + ' by ' + exportedBy + '</span><br><br>' +
+        '<button class="btn-primary btn-sm" onclick="confirmJSONImport()">Load & Replace Current Data</button>' +
+        '</div>';
+    } catch(err) {
+      document.getElementById('json-import-status').innerHTML =
+        '<div style="color:var(--negative);font-size:12px;margin-top:8px;">Invalid file — must be a CCP Tracker .json file.</div>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmJSONImport() {
+  if (!window._pendingImport) return;
+  saveBackup('pre-import');
+  applySnapshot(window._pendingImport);
+  saveData(); normalizeDueDates(); checkAllDeadlines();
+  closeModal('data-modal');
+  window._pendingImport = null;
+  showToast('Data loaded successfully.');
+}
+
+function renderBackupList() {
+  const container = document.getElementById('backup-list');
+  if (!container) return;
+  try {
+    const backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+    if (!backups.length) { container.innerHTML = '<div style="font-size:12px;color:#8a9bb0;">No backups yet. Backups are created automatically every 10 saves.</div>'; return; }
+    container.innerHTML = backups.map((b, i) => {
+      const ts = new Date(b.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      const data = JSON.parse(b.snapshot);
+      const coCount = (data.companies||[]).length;
+      const dlCount = (data.deadlines||[]).length;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--ccp-rule);">
+        <div>
+          <span style="font-size:12px;font-weight:600;">${ts}</span>
+          <span style="font-size:10px;color:#8a9bb0;margin-left:8px;">${b.user} · ${coCount} companies · ${dlCount} deadlines · ${b.label}</span>
+        </div>
+        <button class="btn-icon btn-sm" onclick="restoreBackup(${i})">↩ Restore</button>
+      </div>`;
+    }).join('');
+  } catch(e) { container.innerHTML = '<div style="font-size:12px;color:var(--negative);">Error reading backups.</div>'; }
+}
+
+
+// ─── SHAREPOINT PUSH / PULL ────────────────────────────────────────────────────
+const SP_SITE   = 'https://concp.sharepoint.com/sites/CreditReportingTracker';
+const SP_FOLDER = '/sites/CreditReportingTracker/Shared Documents';
+const SP_FILE   = 'CCP_Tracker_data.json';
+
+async function spGetDigest() {
+  const res = await fetch(SP_SITE + '/_api/contextinfo', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose' },
+    credentials: 'include'
+  });
+  if (!res.ok) throw new Error('SharePoint auth failed (' + res.status + '). Make sure you opened this file from SharePoint, not your desktop.');
+  const data = await res.json();
+  var ctx = data.d ? data.d.GetContextWebInformation : data;
+  return ctx.FormDigestValue;
+}
+
+async function pushToSharePoint() {
+  var ind = document.getElementById('save-indicator');
+  try {
+    if (ind) { ind.textContent = '● Pushing...'; ind.style.color = '#0078d4'; }
+    var digest = await spGetDigest();
+    var snapshot = JSON.stringify({
+      companies: companies, deadlines: deadlines,
+      settings: settings, trashBin: trashBin,
+      savedAt: new Date().toISOString(),
+      savedBy: currentUser || 'Unknown'
+    }, null, 2);
+    var blob = new Blob([snapshot], { type: 'application/json' });
+    var url = SP_SITE + "/_api/web/GetFolderByServerRelativeUrl(@v)/Files/Add(url='" + SP_FILE + "',overwrite=true)&@v='" + encodeURIComponent(SP_FOLDER) + "'";
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json;odata=verbose', 'X-RequestDigest': digest },
+      body: blob,
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Upload failed: ' + res.status);
+    if (ind) {
+      ind.textContent = '● Pushed to SharePoint ✓';
+      ind.style.color = '#1D8D90';
+      setTimeout(function() { ind.textContent = '● Saved locally'; ind.style.color = '#4a7a9b'; }, 3000);
+    }
+    showToast('Pushed to SharePoint. Colleagues can now Pull to get your latest data.');
+  } catch(e) {
+    console.error('Push failed:', e);
+    if (ind) { ind.textContent = '● Push failed'; ind.style.color = 'var(--negative)'; }
+    showToast('Push failed: ' + e.message);
+  }
+}
+
+async function pullFromSharePoint() {
+  var ind = document.getElementById('save-indicator');
+  try {
+    if (ind) { ind.textContent = '● Pulling...'; ind.style.color = '#0078d4'; }
+    var url = SP_SITE + "/_api/web/GetFileByServerRelativeUrl(@v)/$value?@v='" + encodeURIComponent(SP_FOLDER + '/' + SP_FILE) + "'&_=" + Date.now();
+    var res = await fetch(url, { credentials: 'include' });
+    if (res.status === 404) {
+      showToast('No shared data file on SharePoint yet. Make your changes and click Push first.');
+      if (ind) { ind.textContent = '● Saved locally'; ind.style.color = '#4a7a9b'; }
+      return;
+    }
+    if (!res.ok) throw new Error('Download failed: ' + res.status);
+    var data = JSON.parse(await res.text());
+    var coCount = (data.companies || []).length;
+    var dlCount = (data.deadlines || []).length;
+    var savedAt = data.savedAt ? new Date(data.savedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'unknown';
+    var savedBy = data.savedBy || 'Unknown';
+    var ok = await spConfirm('Load data from SharePoint? Saved by ' + savedBy + ' at ' + savedAt + ' (' + coCount + ' companies, ' + dlCount + ' deadlines). Your local data will be replaced — a backup is saved first.');
+    if (!ok) {
+      if (ind) { ind.textContent = '● Saved locally'; ind.style.color = '#4a7a9b'; }
+      return;
+    }
+    saveBackup('pre-pull');
+    applySnapshot(data);
+    saveData(); normalizeDueDates(); checkAllDeadlines();
+    if (ind) {
+      ind.textContent = '● Pulled from SharePoint ✓';
+      ind.style.color = '#1D8D90';
+      setTimeout(function() { ind.textContent = '● Saved locally'; ind.style.color = '#4a7a9b'; }, 3000);
+    }
+    showToast('Loaded ' + coCount + ' companies and ' + dlCount + ' deadlines from SharePoint.');
+  } catch(e) {
+    console.error('Pull failed:', e);
+    if (ind) { ind.textContent = '● Pull failed'; ind.style.color = 'var(--negative)'; }
+    showToast('Pull failed: ' + e.message);
+  }
 }
 
 // ─── NORMALIZE DUE DATES ──────────────────────────────────────────────────────
@@ -2298,52 +2527,19 @@ if (currentUser) {
   setTimeout(promptUserName, 400);
 }
 
-// ─── FIREBASE BOOT ───────────────────────────────────────────────────────────
-document.getElementById('tracker-date').textContent =
-  TODAY.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-document.getElementById('footer-date').textContent =
-  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const hasSaved = loadData();
+normalizeDueDates();
+if (hasSaved) saveData();
+checkAllDeadlines();
 
-// Load user identity from localStorage (persists between sessions)
-try { currentUser = localStorage.getItem('ccp_tracker_user') || ''; } catch(e) {}
-if (currentUser) {
-  var badge = document.getElementById('current-user-name');
-  if (badge) badge.textContent = currentUser;
-} else {
-  setTimeout(promptUserName, 400);
-}
+// Update trash tab badge
+setTimeout(function() {
+  const tab = document.getElementById('trash-tab');
+  if (tab && trashBin.length > 0) tab.textContent = '🗑 Trash (' + trashBin.length + ')';
+}, 100);
 
-// Connect to Firestore
-var ind = document.getElementById('save-indicator');
-if (firebaseConfig.apiKey === 'PASTE_API_KEY_HERE') {
-  // Config not filled in yet — show helpful message
-  if (ind) { ind.textContent = '● Firebase not configured'; ind.style.color = 'var(--negative)'; }
-  showToast('Please paste your Firebase config into the ccp_tracker_firebase.html file. See the setup guide.');
-} else {
-  if (ind) { ind.textContent = '● Connecting to Firebase...'; ind.style.color = '#0078d4'; }
-  fbRead().then(function() {
-    // First ever load — seed with sample data if Firestore is empty
-    if (companies.length === 0) {
-      return fbWrite();
-    }
-  }).then(function() {
-    normalizeDueDates();
-    checkAllDeadlines();
-    startListeners(); // start real-time listeners
-    var tab = document.getElementById('trash-tab');
-    if (tab && trashBin.length > 0) tab.textContent = 'Trash (' + trashBin.length + ')';
-  }).catch(function(e) {
-    console.error('Firebase connection error:', e);
-    // Fall back to localStorage backup
-    try {
-      var backup = localStorage.getItem('ccp_fb_backup');
-      if (backup) applySnapshot(JSON.parse(backup));
-    } catch(e2) {}
-    normalizeDueDates(); checkAllDeadlines();
-    if (ind) { ind.textContent = '● Firebase error — using local backup'; ind.style.color = 'var(--negative)'; }
-    showToast('Firebase connection failed: ' + e.message);
-  });
-}
+// Prompt reconnect to shared file if one was used last session
+fsTryAutoLoad();
 </script>
 </body>
 </html>
