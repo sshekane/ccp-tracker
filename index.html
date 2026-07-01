@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCP | Private Credit Reporting Tracker</title>
+<style>
+  :root {
+    --ccp-primary-navy: #005595;
+    --ccp-dark-navy: #0A213C;
+    --ccp-deep-blue: #023973;
+    --ccp-medium-blue: #237FD3;
+    --ccp-teal: #098FAB;
+    --ccp-dark-teal: #1D8D90;
+    --ccp-bg-soft: #F4F6F9;
+    --ccp-rule: #D9DEE5;
+    --positive: #1D8D90;
+    --negative: #C0392B;
+    --warning: #E67E22;
+    --neutral: #8a9bb0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Aptos","Inter Tight",Arial,sans-serif; background: #fff; color: var(--ccp-dark-navy); font-size: 13px; }
+
+  /* HEADER */
+  .app-header { background: var(--ccp-dark-navy); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 52px; border-bottom: 3px solid var(--ccp-primary-navy); }
+  .app-logo { display: flex; align-items: baseline; gap: 6px; }
+  .app-logo .const { font-family: "Century Schoolbook","Source Serif Pro",Georgia,serif; font-size: 15px; font-weight: 700; color: var(--ccp-medium-blue); letter-spacing: 2px; }
+  .app-logo .cap { font-family: "Century Schoolbook","Source Serif Pro",Georgia,serif; font-size: 13px; color: #aabdd3; letter-spacing: 1px; }
+  .app-logo .divider { color: #aabdd3; font-size: 11px; margin: 0 6px; }
+  .app-title { font-size: 12px; color: #aabdd3; letter-spacing: 0.5px; }
+  .header-right { display: flex; gap: 10px; align-items: center; }
+  .btn-primary { background: var(--ccp-primary-navy); color: #fff; border: none; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .btn-primary:hover { background: var(--ccp-deep-blue); }
+  .btn-secondary { background: transparent; color: #aabdd3; border: 1px solid #3a5a7a; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .btn-secondary:hover { border-color: var(--ccp-medium-blue); color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn-icon { background: transparent; border: 1px solid var(--ccp-rule); color: var(--ccp-dark-navy); padding: 4px 9px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .btn-icon:hover { border-color: var(--ccp-medium-blue); color: var(--ccp-primary-navy); }
+
+  /* ALERT BANNER */
+  .alert-banner { display: none; background: #fdf0e0; border-bottom: 2px solid var(--warning); padding: 8px 28px; }
+  .alert-banner.show { display: flex; align-items: center; justify-content: space-between; }
+  .alert-banner-text { font-size: 12px; font-weight: 600; color: #7a4e00; }
+  .alert-banner-count { background: var(--warning); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; margin-right: 8px; }
+
+  /* NAV */
+  .nav-tabs { background: var(--ccp-bg-soft); border-bottom: 1px solid var(--ccp-rule); display: flex; align-items: center; padding: 0 28px; }
+  .nav-tab { padding: 10px 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.4px; cursor: pointer; border-bottom: 2px solid transparent; color: #5a7090; }
+  .nav-tab.active { color: var(--ccp-primary-navy); border-bottom-color: var(--ccp-primary-navy); }
+
+  /* CONTENT */
+  .content { padding: 20px 28px; min-height: calc(100vh - 110px); background: var(--ccp-bg-soft); }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* PAGE HEADER */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+  .page-title { font-family: "Century Schoolbook","Source Serif Pro",Georgia,serif; font-size: 20px; font-weight: 700; color: var(--ccp-dark-navy); }
+  .page-subtitle { font-size: 11px; color: #8a9bb0; margin-top: 3px; }
+
+  /* KPI ROW */
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 18px; }
+  .kpi-card { background: #fff; border: 1px solid var(--ccp-rule); padding: 12px 14px; }
+  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #8a9bb0; text-transform: uppercase; margin-bottom: 5px; }
+  .kpi-value { font-family: "IBM Plex Mono","JetBrains Mono",monospace; font-size: 24px; font-weight: 700; color: var(--ccp-dark-navy); }
+  .kpi-value.alert { color: var(--negative); }
+  .kpi-value.warn { color: var(--warning); }
+  .kpi-value.ok { color: var(--positive); }
+  .kpi-sub { font-size: 10px; color: #8a9bb0; margin-top: 3px; }
+
+  /* FILTERS */
+  .filter-bar { background: #fff; border: 1px solid var(--ccp-rule); padding: 10px 14px; display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-bar label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #8a9bb0; text-transform: uppercase; margin-right: 4px; }
+  .filter-bar select, .filter-bar input { padding: 5px 10px; border: 1px solid var(--ccp-rule); font-family: inherit; font-size: 12px; color: var(--ccp-dark-navy); background: #fff; min-width: 120px; }
+  .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: var(--ccp-medium-blue); }
+
+  /* TABLE */
+  .table-wrapper { background: #fff; border: 1px solid var(--ccp-rule); overflow-x: auto; margin-bottom: 16px; }
+  .rep-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1100px; }
+  .rep-table thead th { background: var(--ccp-dark-navy); color: #fff; padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11px; letter-spacing: 0.3px; white-space: nowrap; cursor: pointer; }
+  .rep-table thead th:hover { background: var(--ccp-deep-blue); }
+  .rep-table thead th.sortable { cursor: pointer; user-select: none; }
+  .rep-table thead th.sortable:after { content: ' ⇅'; opacity: 0.35; font-size: 10px; }
+  .rep-table thead th.sort-asc:after { content: ' ↑'; opacity: 1; font-size: 11px; }
+  .rep-table thead th.sort-desc:after { content: ' ↓'; opacity: 1; font-size: 11px; }
+  .rep-table thead th.sort-asc::after { content: ' ↑'; }
+  .rep-table thead th.sort-desc::after { content: ' ↓'; }
+  .rep-table tbody td { padding: 9px 12px; border-bottom: 1px solid var(--ccp-rule); vertical-align: middle; white-space: nowrap; }
+  .rep-table tbody tr:hover td { background: #f5f8fc; }
+  .rep-table tbody tr.overdue td { background: #fff8f8; }
+  .rep-table tbody tr.overdue td:first-child { border-left: 3px solid var(--negative); }
+  .rep-table tbody tr.pending td { background: #fffdf5; }
+  .rep-table tbody tr.pending td:first-child { border-left: 3px solid var(--warning); }
+  .rep-table tbody tr.received td:first-child { border-left: 3px solid var(--positive); }
+
+  /* BADGES */
+  .badge { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+  .badge-received { background: #e0f5f1; color: var(--positive); }
+  .badge-overdue { background: #fde8e8; color: var(--negative); }
+  .badge-pending { background: #fdf0e0; color: var(--warning); }
+  .badge-na { background: #f0f0f0; color: #8a9bb0; }
+  .badge-waived { background: #eef3f9; color: var(--ccp-primary-navy); }
+  .badge-maturity { background: #f3e8ff; color: #6b21a8; }
+  .maturity-near { color: var(--warning); font-weight: 700; }
+  .maturity-urgent { color: var(--negative); font-weight: 700; }
+  .maturity-ok { color: #5a7090; }
+  .company-deadlines-panel { margin-top: 12px; background: var(--ccp-bg-soft); border: 1px solid var(--ccp-rule); padding: 0; }
+  .company-deadlines-panel .cdp-header { padding: 10px 14px; background: var(--ccp-bg-soft); border-bottom: 1px solid var(--ccp-rule); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #8a9bb0; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+  .company-deadlines-panel table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .company-deadlines-panel th { background: #e8eef5; padding: 6px 10px; text-align: left; font-size: 10px; font-weight: 700; color: #5a7090; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; }
+  .company-deadlines-panel td { padding: 7px 10px; border-bottom: 1px solid var(--ccp-rule); vertical-align: middle; white-space: nowrap; font-family: inherit; }
+  .company-deadlines-panel tr:last-child td { border-bottom: none; }
+  .company-deadlines-panel tr:hover td { background: #eef3f9; }
+
+  /* ACTIONS */
+  .action-btns { display: flex; gap: 5px; }
+  .btn-mark { padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid; font-family: inherit; }
+  .btn-mark-received { border-color: var(--positive); color: var(--positive); background: #fff; }
+  .btn-mark-received:hover { background: #e0f5f1; }
+  .btn-notify { border-color: var(--ccp-medium-blue); color: var(--ccp-medium-blue); background: #fff; }
+  .btn-notify:hover { background: #eef3f9; }
+  .btn-waive { border-color: #8a9bb0; color: #8a9bb0; background: #fff; }
+  .btn-waive:hover { background: var(--ccp-bg-soft); }
+  .days-badge { display: inline-block; font-family: "IBM Plex Mono","JetBrains Mono",monospace; font-size: 11px; font-weight: 700; padding: 2px 6px; }
+  .days-overdue { color: var(--negative); background: #fde8e8; }
+  .days-due-soon { color: var(--warning); background: #fdf0e0; }
+  .days-ok { color: var(--positive); background: #e0f5f1; }
+
+  /* MODALS */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,33,60,0.5); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; width: 600px; max-width: 95vw; max-height: 90vh; overflow-y: auto; border-top: 4px solid var(--ccp-primary-navy); }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--ccp-rule); display: flex; justify-content: space-between; align-items: center; background: var(--ccp-bg-soft); }
+  .modal-header h3 { font-family: "Century Schoolbook","Source Serif Pro",Georgia,serif; font-size: 16px; color: var(--ccp-dark-navy); }
+  .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #8a9bb0; }
+  .modal-body { padding: 20px; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--ccp-rule); display: flex; gap: 8px; justify-content: flex-end; background: var(--ccp-bg-soft); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label { font-size: 11px; font-weight: 700; color: #5a7090; letter-spacing: 0.3px; text-transform: uppercase; }
+  .form-group input, .form-group select, .form-group textarea { padding: 7px 10px; border: 1px solid var(--ccp-rule); font-family: inherit; font-size: 12px; color: var(--ccp-dark-navy); }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--ccp-medium-blue); }
+  .section-divider { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ccp-primary-navy); text-transform: uppercase; border-bottom: 1px solid var(--ccp-rule); padding-bottom: 6px; margin: 4px 0 4px; grid-column: 1 / -1; }
+  .checkbox-row { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+
+  /* EMAIL MODAL */
+  .email-preview { background: var(--ccp-bg-soft); border: 1px solid var(--ccp-rule); padding: 16px; font-size: 12px; line-height: 1.7; margin-bottom: 12px; }
+  .email-preview .email-field { margin-bottom: 8px; }
+  .email-preview .email-field span { font-weight: 700; font-size: 11px; color: #5a7090; display: inline-block; width: 50px; }
+  .email-body-edit { width: 100%; min-height: 200px; border: 1px solid var(--ccp-rule); padding: 10px; font-family: inherit; font-size: 12px; line-height: 1.7; resize: vertical; }
+
+  /* HISTORY VIEW */
+  .timeline-item { background: #fff; border: 1px solid var(--ccp-rule); padding: 12px 16px; margin-bottom: 8px; border-left: 3px solid var(--ccp-primary-navy); }
+  .timeline-item.action-received { border-left-color: var(--positive); }
+  .timeline-item.action-notified { border-left-color: var(--warning); }
+  .timeline-item.action-waived { border-left-color: #8a9bb0; }
+  .timeline-meta { font-size: 10px; color: #8a9bb0; margin-top: 4px; }
+
+  /* COMPANY SETUP */
+  .company-setup-row { background: #fff; border: 1px solid var(--ccp-rule); padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 16px; }
+  .company-setup-name { font-weight: 700; font-size: 13px; min-width: 180px; }
+  .company-setup-badges { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .setup-badge { font-size: 10px; padding: 3px 8px; background: #eef3f9; color: var(--ccp-dark-navy); font-weight: 600; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ccp-dark-navy); color: #fff; padding: 10px 18px; font-size: 12px; z-index: 9999; display: none; border-left: 4px solid var(--ccp-dark-teal); max-width: 360px; }
+  .toast.show { display: block; }
+
+  .page-footer { font-size: 10px; color: #aabdd3; border-top: 1px solid var(--ccp-rule); padding: 8px 28px; display: flex; justify-content: space-between; background: #fff; }
+  .cal-co-row { display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:12px;color:var(--ccp-dark-navy); }
+  .cal-co-row:hover { background:var(--ccp-bg-soft); }
+  .cal-co-row input[type=checkbox] { width:14px;height:14px;cursor:pointer;accent-color:var(--ccp-primary-navy); }
+  .cal-co-swatch { width:10px;height:10px;border-radius:2px;flex-shrink:0; }
+</style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="app-logo">
+      <span class="const">CONSTITUTION</span>
+      <span class="divider">|</span>
+      <span class="cap">Capital Partners</span>
+    </div>
+    <div style="width:1px;height:24px;background:#2a4a6a;"></div>
+    <div class="app-title">PRIVATE CREDIT · FINANCIAL REPORTING TRACKER</div>
+  </div>
+  <div class="header-right">
+    <span style="font-size:10px;color:#4a7a9b;letter-spacing:0.3px;" id="save-indicator">● Connecting...</span>
+    <span style="font-size:11px;color:#aabdd3;padding:4px 10px;border:1px solid #2a4a6a;cursor:pointer;" id="current-user-badge" onclick="promptUserName()" title="Click to change user">👤 <span id="current-user-name">—</span></span>
+    <div style="width:1px;height:24px;background:#2a4a6a;"></div>
+    <button class="btn-secondary" onclick="openAddDeadlineModal()">+ Add Deadline</button>
+    <button class="btn-primary" onclick="openAddCompanyModal()">+ Add Company</button>
+  </div>
+</div>
+
+<!-- ALERT BANNER -->
+<div class="alert-banner" id="alert-banner">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span class="alert-banner-count" id="alert-count">0</span>
+    <span class="alert-banner-text" id="alert-text">reporting deadlines are past due. Notices should be sent.</span>
+  </div>
+  <button class="btn-secondary btn-sm" onclick="notifyAllOverdue()">Send All Overdue Notices</button>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('tracker')">Reporting Tracker</div>
+  <div class="nav-tab" onclick="switchTab('calendar')">Deadline Calendar</div>
+  <div class="nav-tab" onclick="switchTab('settings')">Companies & Settings</div>
+  <div class="nav-tab" onclick="switchTab('trash')" id="trash-tab">🗑 Trash</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- TRACKER VIEW -->
+  <div class="view active" id="view-tracker">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Reporting Tracker</div>
+        <div class="page-subtitle">Monitor financial submission status across all portfolio companies · As of <span id="tracker-date"></span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:10px;color:#8a9bb0;" id="tracker-scope-label">Showing: overdue + next 120 days</span>
+        <button class="btn-icon" onclick="exportCSV()">↓ Export CSV</button>
+        <button class="btn-primary btn-sm" onclick="checkAllDeadlines()">↻ Refresh Status</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="tracker-kpis"></div>
+
+    <!-- FILTERS -->
+    <div class="filter-bar">
+      <div><label>Show</label><select id="filter-window" onchange="renderTracker()">
+        <option value="30">Next 1 Month</option>
+        <option value="90" selected>Next 3 Months</option>
+        <option value="180">Next 6 Months</option>
+        <option value="365">Next 12 Months</option>
+        <option value="0">All Deadlines</option>
+      </select></div>
+      <div><label>Company</label><select id="filter-company" onchange="renderTracker()"><option value="">All Companies</option></select></div>
+      <div><label>Report Type</label><select id="filter-type" onchange="renderTracker()"><option value="">All Types</option><option>Quarterly Financials</option><option>Annual Financials</option><option>Monthly Financials</option><option>Annual Budget</option></select></div>
+      <div><label>Status</label><select id="filter-status" onchange="renderTracker()"><option value="">All Statuses</option><option>Received</option><option>Overdue</option><option>Pending</option><option>Waived</option></select></div>
+      <div><label>Specific Period</label><select id="filter-period" onchange="renderTracker()"><option value="">All Periods</option></select></div>
+      <div style="margin-left:auto;"><button class="btn-icon btn-sm" onclick="clearTrackerFilters()" style="white-space:nowrap;">✕ Clear Filters</button></div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="rep-table">
+        <thead>
+          <tr>
+            <th data-field="company"      onclick="sortBy('company')"      class="sortable">Company</th>
+            <th data-field="maturity"     onclick="sortBy('maturity')"     class="sortable">Maturity</th>
+            <th data-field="reportType"   onclick="sortBy('reportType')"   class="sortable">Report Type</th>
+            <th data-field="period"       onclick="sortBy('period')"       class="sortable">Period</th>
+            <th data-field="dueDate"      onclick="sortBy('dueDate')"      class="sortable sort-asc">Due Date</th>
+            <th data-field="graceDays"    onclick="sortBy('graceDays')"    class="sortable">Grace Period</th>
+            <th data-field="receivedDate" onclick="sortBy('receivedDate')" class="sortable">Received Date</th>
+            <th data-field="daysOverdue"  onclick="sortBy('daysOverdue')"  class="sortable">Days</th>
+            <th data-field="status"       onclick="sortBy('status')"       class="sortable">Status</th>
+            <th>Notices Sent</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tracker-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CALENDAR VIEW -->
+  <div class="view" id="view-calendar">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Deadline Calendar</div>
+        <div class="page-subtitle" id="cal-subtitle">Upcoming reporting deadlines · Next 3 Months</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <!-- Period select -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:10px;font-weight:700;letter-spacing:0.5px;color:#8a9bb0;text-transform:uppercase;white-space:nowrap;">Show</label>
+          <select id="cal-window-select" onchange="renderCalendar()" style="padding:5px 10px;border:1px solid var(--ccp-rule);font-family:inherit;font-size:12px;color:var(--ccp-dark-navy);background:#fff;">
+            <option value="30">Next 1 Month</option>
+            <option value="90" selected>Next 3 Months</option>
+            <option value="180">Next 6 Months</option>
+            <option value="365">Next 12 Months</option>
+            <option value="0">All</option>
+          </select>
+        </div>
+        <!-- Company multi-select dropdown -->
+        <div style="position:relative;" id="cal-filter-wrap">
+          <button onclick="toggleCalFilter(event)" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--ccp-rule);background:#fff;font-family:inherit;font-size:12px;cursor:pointer;color:var(--ccp-dark-navy);">
+            <span id="cal-filter-label">All Companies</span>
+            <span style="font-size:9px;color:#8a9bb0;">▼</span>
+          </button>
+          <div id="cal-filter-dropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid var(--ccp-rule);min-width:220px;z-index:500;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+            <div style="padding:8px 12px;border-bottom:1px solid var(--ccp-rule);display:flex;gap:8px;">
+              <button onclick="calSelectAll()" style="font-size:11px;background:none;border:none;cursor:pointer;color:var(--ccp-primary-navy);font-family:inherit;font-weight:600;">Select All</button>
+              <span style="color:#ccc;">|</span>
+              <button onclick="calSelectNone()" style="font-size:11px;background:none;border:none;cursor:pointer;color:var(--ccp-primary-navy);font-family:inherit;font-weight:600;">Clear</button>
+            </div>
+            <div id="cal-filter-list" style="max-height:240px;overflow-y:auto;padding:6px 0;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="calendar-content"></div>
+  </div>
+
+
+  <!-- SETTINGS VIEW -->
+  <div class="view" id="view-settings">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Companies & Settings</div>
+        <div class="page-subtitle">Configure reporting schedules, contacts, and notification preferences</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div style="background:#fff;border:1px solid var(--ccp-rule);padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#8a9bb0;text-transform:uppercase;margin-bottom:12px;">Notification Settings</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Default Recipient Email(s)</label>
+          <input type="text" id="setting-emails" value="credit@constitutioncp.com" placeholder="Comma-separated emails">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Notify When Overdue By (Days)</label>
+          <input type="number" id="setting-notify-days" value="3" min="0">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Auto-Remind Every (Days)</label>
+          <input type="number" id="setting-remind-freq" value="7" min="1">
+        </div>
+        <button class="btn-primary btn-sm" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--ccp-rule);padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#8a9bb0;text-transform:uppercase;margin-bottom:12px;">Email Template</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Subject</label>
+          <input type="text" id="setting-subject" value="[Reminder] Financial Reporting Due — {company} · {period}">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Body Template</label>
+          <textarea id="setting-body" rows="5" style="resize:vertical;width:100%;border:1px solid var(--ccp-rule);padding:8px;font-family:inherit;font-size:12px;">Dear {contact},
+
+This is a reminder that {company}'s {report_type} for {period} was due on {due_date} and has not yet been received.
+
+Please submit the required financials at your earliest convenience. If you have any questions, please reach out to your CCP contact directly.
+
+Thank you,
+Constitution Capital Partners — Private Credit Team</textarea>
+        </div>
+        <button class="btn-primary btn-sm" onclick="saveSettings()">Save Template</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#8a9bb0;text-transform:uppercase;">Portfolio Companies</div>
+      <button class="btn-icon btn-sm" onclick="openDataModal()">↕ Export / Import / Backups</button>
+    </div>
+    <div id="company-settings-list"></div>
+  </div>
+
+  <!-- TRASH VIEW -->
+  <div class="view" id="view-trash">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Trash</div>
+        <div class="page-subtitle">Deleted items are kept for 30 days · Click Restore to recover anything deleted by mistake</div>
+      </div>
+      <div>
+        <button class="btn-icon btn-sm" onclick="emptyTrash()" style="border-color:#e0b0b0;color:var(--negative);">Empty Trash</button>
+      </div>
+    </div>
+    <div id="trash-content"></div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<div class="page-footer">
+  <span>CONFIDENTIAL — Constitution Capital Partners, LP · For Internal Use Only</span>
+  <span>Financial Reporting Tracker</span>
+  <span id="footer-date"></span>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div class="modal-overlay" id="sp-confirm-modal" style="z-index:9998;">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header" style="background:#fff;">
+      <h3 id="sp-confirm-title">Confirm</h3>
+    </div>
+    <div class="modal-body" style="padding:20px 24px;">
+      <p id="sp-confirm-msg" style="font-size:13px;color:var(--ccp-dark-navy);line-height:1.6;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="spConfirmResolve(false)">Cancel</button>
+      <button class="btn-primary" id="sp-confirm-yes" onclick="spConfirmResolve(true)">Yes, Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER IDENTITY MODAL -->
+<div class="modal-overlay" id="user-modal" style="z-index:2000;">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      <h3>Who are you?</h3>
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:#5a7090;margin-bottom:14px;">Your name will be recorded on every action you take in the tracker.</p>
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input type="text" id="user-name-input" placeholder="e.g. Sarah Chen" style="width:100%;" onkeydown="if(event.key==='Enter')saveUserName()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveUserName()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT/IMPORT MODAL -->
+<div class="modal-overlay" id="data-modal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <h3>Export / Import Data</h3>
+      <button class="modal-close" onclick="closeModal('data-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px;padding:12px 14px;background:#e8f0f8;border:1px solid var(--ccp-rule);border-left:4px solid var(--ccp-primary-navy);">
+        <div style="font-size:12px;font-weight:600;color:var(--ccp-dark-navy);margin-bottom:4px;">Sharing workflow</div>
+        <div style="font-size:11px;color:#5a7090;line-height:1.6;">
+          1. One person clicks <strong>Save to File</strong> in the header → downloads a .json file<br>
+          2. Share that .json (email, Teams, shared drive) with a colleague<br>
+          3. Colleague opens the HTML file, clicks <strong>Load from File</strong> in the header → picks the .json<br>
+          4. Their copy now has your latest data. They make changes, save again, share back.
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#5a7090;text-transform:uppercase;margin-bottom:8px;">Save to File</div>
+        <p style="font-size:12px;color:#5a7090;margin-bottom:10px;">Downloads a .json snapshot of all companies, deadlines, and activity. Share this file with colleagues.</p>
+        <button class="btn-primary btn-sm" onclick="saveToFile()">↓ Save to File</button>
+      </div>
+      <div style="border-top:1px solid var(--ccp-rule);padding-top:16px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#5a7090;text-transform:uppercase;margin-bottom:8px;">Load from File</div>
+        <p style="font-size:12px;color:#5a7090;margin-bottom:10px;">Load a .json file saved by a colleague. <strong style="color:var(--negative);">Replaces your current data</strong> (a backup is created first).</p>
+        <div class="upload-area" onclick="document.getElementById('json-file-input').click()" style="margin-bottom:8px;">
+          <p>Click to select a .json file</p>
+          <div class="upload-hint">CCP Tracker snapshot saved by a colleague</div>
+          <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="handleJSONImport(event)">
+        </div>
+        <div id="json-import-status"></div>
+      </div>
+      <div style="border-top:1px solid var(--ccp-rule);padding-top:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#5a7090;text-transform:uppercase;margin-bottom:8px;">Backups</div>
+        <p style="font-size:12px;color:#5a7090;margin-bottom:10px;">Auto-backups are saved locally. Select one to restore.</p>
+        <div id="backup-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('data-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT COMPANY MODAL -->
+<div class="modal-overlay" id="add-company-modal">
+  <div class="modal" style="width:640px;">
+    <div class="modal-header">
+      <h3 id="co-modal-title">Add Portfolio Company</h3>
+      <button class="modal-close" onclick="closeModal('add-company-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="co-editing-id">
+      <div class="form-grid">
+        <div class="section-divider">Company Information</div>
+        <div class="form-group"><label>Company Name *</label><input type="text" id="co-name"></div>
+        <div class="form-group"><label>Primary Contact Name</label><input type="text" id="co-contact"></div>
+        <div class="form-group full"><label>Contact Email(s)</label><input type="text" id="co-email" placeholder="cfo@company.com, finance@company.com"></div>
+        <div class="section-divider">Reporting Requirements</div>
+        <div class="form-group full">
+          <label>Reporting Cadences (check all that apply)</label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;">
+            <label class="checkbox-row"><input type="checkbox" id="cadence-monthly"> Monthly Financials</label>
+            <label class="checkbox-row"><input type="checkbox" id="cadence-quarterly" checked> Quarterly Financials</label>
+            <label class="checkbox-row"><input type="checkbox" id="cadence-annual" checked> Annual Financials</label>
+            <label class="checkbox-row"><input type="checkbox" id="cadence-budget" checked> Annual Budget</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Monthly — Days After Period End</label>
+          <input type="number" id="co-grace-m" value="30" min="1">
+          <div style="font-size:10px;color:#8a9bb0;margin-top:3px;">e.g. 30 → Jan financials due Feb 28</div>
+        </div>
+        <div class="form-group">
+          <label>Quarterly — Days After Period End</label>
+          <input type="number" id="co-grace-q" value="45" min="1">
+          <div style="font-size:10px;color:#8a9bb0;margin-top:3px;">e.g. 45 → Q1 financials due May 15</div>
+        </div>
+        <div class="form-group">
+          <label>Annual — Days After Fiscal Year End</label>
+          <input type="number" id="co-grace-a" value="90" min="1">
+          <div style="font-size:10px;color:#8a9bb0;margin-top:3px;">e.g. 90 → FY Dec financials due Mar 31</div>
+        </div>
+        <div class="form-group">
+          <label>Annual Budget — Days After Fiscal Year End</label>
+          <input type="number" id="co-grace-b" value="30" min="1">
+          <div style="font-size:10px;color:#8a9bb0;margin-top:3px;">e.g. 30 → FY2025 budget due Jan 30 (30d after Dec 31 FYE)</div>
+        </div>
+        <div class="form-group"><label>Fiscal Year End Month</label>
+          <select id="co-fye">
+            <option value="12">December</option><option value="1">January</option>
+            <option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option>
+            <option value="6">June</option><option value="7">July</option>
+            <option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option>
+          </select>
+        </div>
+        <div class="form-group" style="align-self:end;">
+          <label style="visibility:hidden;">Hint</label>
+          <div style="font-size:10px;color:#8a9bb0;padding:7px 10px;background:var(--ccp-bg-soft);border:1px solid var(--ccp-rule);" id="co-budget-hint">Budget due date will be calculated automatically based on days above and fiscal year end.</div>
+        </div>
+        <div class="section-divider">Loan Details</div>
+        <div class="form-group"><label>Loan Commitment Date</label><input type="date" id="co-commitment-date"></div>
+        <div class="form-group"><label>Maturity Date</label><input type="date" id="co-maturity-date"></div>
+        <div class="form-group"><label>Loan Type</label>
+          <select id="co-loan-type">
+            <option value="Term Loan B">Term Loan B</option>
+            <option value="Term Loan A">Term Loan A</option>
+            <option value="Revolving Credit">Revolving Credit</option>
+            <option value="Unitranche">Unitranche</option>
+            <option value="Second Lien">Second Lien</option>
+            <option value="Mezzanine">Mezzanine</option>
+            <option value="Bridge Loan">Bridge Loan</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Commitment Amount ($M)</label><input type="number" id="co-commitment-amt" step="0.1" placeholder="e.g. 50.0"></div>
+        <!-- Shown when ADDING a new company -->
+        <div class="form-group" id="co-populate-wrap">
+          <label>Auto-Populate Deadlines</label>
+          <select id="co-auto-populate">
+            <option value="current_year">Current Year Only</option>
+            <option value="full_term">Full Loan Term</option>
+            <option value="none">No — add manually</option>
+          </select>
+        </div>
+        <!-- Shown when EDITING an existing company -->
+        <div class="form-group" id="co-recalc-wrap" style="display:none;">
+          <label>Recalculate Existing Deadlines</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--ccp-bg-soft);border:1px solid var(--ccp-rule);">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;">
+              <input type="checkbox" id="co-recalc-check" style="margin-top:2px;width:14px;height:14px;accent-color:var(--ccp-primary-navy);">
+              <span>Recalculate due dates for all <strong>pending &amp; future</strong> deadlines using the updated grace days above</span>
+            </label>
+            <div style="font-size:10px;color:#8a9bb0;line-height:1.5;">Already-received deadlines will not be changed. Deadlines with a due date in the past will not be changed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <div id="co-modal-left-btn"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="closeModal('add-company-modal')">Cancel</button>
+        <button class="btn-primary" id="co-save-btn" onclick="saveCompany()">Add Company</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT DEADLINE MODAL -->
+<div class="modal-overlay" id="add-deadline-modal">
+  <div class="modal" style="width:580px;">
+    <div class="modal-header">
+      <h3 id="dl-modal-title">Add Reporting Deadline</h3>
+      <button class="modal-close" onclick="closeModal('add-deadline-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dl-editing-id">
+      <div class="form-grid">
+
+        <!-- Row 1: Company + Report Type -->
+        <div class="form-group">
+          <label>Company *</label>
+          <select id="dl-company" style="width:100%;" onchange="onDlCompanyChange()"></select>
+        </div>
+        <div class="form-group">
+          <label>Report Type *</label>
+          <select id="dl-type" onchange="onDlTypeChange()">
+            <option value="Monthly Financials">Monthly Financials</option>
+            <option value="Quarterly Financials" selected>Quarterly Financials</option>
+            <option value="Annual Financials">Annual Financials</option>
+            <option value="Annual Budget">Annual Budget</option>
+          </select>
+        </div>
+
+        <!-- Period selectors — shown/hidden by type -->
+        <div class="form-group" id="dl-month-wrap" style="display:none;">
+          <label>Month *</label>
+          <select id="dl-month" onchange="onDlPeriodChange()">
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="form-group" id="dl-quarter-wrap" style="display:none;">
+          <label>Quarter *</label>
+          <select id="dl-quarter" onchange="onDlPeriodChange()">
+            <option value="1">Q1 (Jan – Mar)</option>
+            <option value="2">Q2 (Apr – Jun)</option>
+            <option value="3">Q3 (Jul – Sep)</option>
+            <option value="4">Q4 (Oct – Dec)</option>
+          </select>
+        </div>
+        <div class="form-group" id="dl-year-wrap">
+          <label>Year *</label>
+          <select id="dl-year" onchange="onDlPeriodChange()"></select>
+        </div>
+
+        <!-- Computed period label (read-only display) -->
+        <div class="form-group full" id="dl-period-preview-wrap">
+          <label>Period</label>
+          <div style="padding:7px 10px;background:var(--ccp-bg-soft);border:1px solid var(--ccp-rule);font-size:12px;color:var(--ccp-dark-navy);display:flex;justify-content:space-between;align-items:center;">
+            <span id="dl-period-preview">—</span>
+            <span style="font-size:10px;color:#8a9bb0;">Auto-calculated</span>
+          </div>
+        </div>
+
+        <!-- Due Date: auto-suggested + calendar override -->
+        <div class="form-group">
+          <label>Due Date *</label>
+          <input type="date" id="dl-due">
+          <div style="font-size:10px;color:#8a9bb0;margin-top:3px;" id="dl-due-hint"></div>
+        </div>
+        <div class="form-group">
+          <label>Grace Period (Days)</label>
+          <input type="number" id="dl-grace" value="0" min="0">
+        </div>
+
+        <!-- Status + Received Date -->
+        <div class="form-group">
+          <label>Status</label>
+          <select id="dl-status">
+            <option value="Pending">Pending</option>
+            <option value="Received">Received</option>
+            <option value="Waived">Waived</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Received Date (if applicable)</label>
+          <input type="date" id="dl-received">
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group full">
+          <label>Notes</label>
+          <input type="text" id="dl-notes" placeholder="Optional notes">
+        </div>
+
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-icon btn-sm" id="dl-delete-btn" onclick="deleteDeadlineFromModal()" style="border-color:#e0b0b0;color:var(--negative);display:none;">Delete Deadline</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="closeModal('add-deadline-modal')">Cancel</button>
+        <button class="btn-primary" id="dl-save-btn" onclick="saveDeadline()">Add Deadline</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFY MODAL -->
+<div class="modal-overlay" id="notify-modal">
+  <div class="modal" style="width:640px;">
+    <div class="modal-header">
+      <h3>Send Overdue Notice</h3>
+      <button class="modal-close" onclick="closeModal('notify-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="email-preview">
+        <div class="email-field"><span>To:</span> <span id="notify-to">—</span></div>
+        <div class="email-field"><span>CC:</span> <span id="notify-cc">credit@constitutioncp.com</span></div>
+        <div class="email-field"><span>Subject:</span> <span id="notify-subject">—</span></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#8a9bb0;text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;">Email Body</div>
+      <textarea class="email-body-edit" id="notify-body"></textarea>
+      <div style="margin-top:10px;font-size:11px;color:#8a9bb0;">Note: This tool generates the notice for your review. Copy the email content and send via your email client, or confirm below to log it as sent.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('notify-modal')">Cancel</button>
+      <button class="btn-primary" onclick="confirmNotify()">Log as Sent & Copy Email</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const TODAY = new Date(); TODAY.setHours(0,0,0,0); // Always use real today
+
+// ─── BUSINESS DAY ADJUSTMENT ─────────────────────────────────────────────────
+// localIso: returns YYYY-MM-DD in local time (avoids UTC-shift bug in toISOString)
+function localIso(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function usHolidays(yr) {
+  const nthWeekday = (y, mo, n, dow) => {
+    const first = new Date(y, mo - 1, 1);
+    const offset = (dow - first.getDay() + 7) % 7;
+    return new Date(y, mo - 1, 1 + offset + (n - 1) * 7);
+  };
+  const lastWeekday = (y, mo, dow) => {
+    let d = new Date(y, mo, 0); // last day of month
+    while (d.getDay() !== dow) d.setDate(d.getDate() - 1);
+    return d;
+  };
+  const observe = (d) => {
+    const r = new Date(d);
+    if (r.getDay() === 6) r.setDate(r.getDate() - 1);
+    else if (r.getDay() === 0) r.setDate(r.getDate() + 1);
+    return r;
+  };
+  const dayAfter = (d) => { const r = new Date(d); r.setDate(r.getDate() + 1); return r; };
+  return new Set([
+    localIso(observe(new Date(yr, 0,  1))),          // New Year's Day
+    localIso(nthWeekday(yr, 1, 3, 1)),               // MLK Day (3rd Mon Jan)
+    localIso(nthWeekday(yr, 2, 3, 1)),               // Presidents' Day (3rd Mon Feb)
+    localIso(lastWeekday(yr, 5, 1)),                 // Memorial Day (last Mon May)
+    localIso(observe(new Date(yr, 5, 19))),           // Juneteenth
+    localIso(observe(new Date(yr, 6,  4))),           // Independence Day
+    localIso(nthWeekday(yr, 9, 1, 1)),               // Labor Day (1st Mon Sep)
+    localIso(nthWeekday(yr, 10, 4, 4)),              // Thanksgiving (4th Thu Nov)
+    localIso(dayAfter(nthWeekday(yr, 10, 4, 4))),    // Day after Thanksgiving
+    localIso(observe(new Date(yr, 11, 25))),          // Christmas Day
+  ]);
+}
+const _holidayCache = {};
+function isHoliday(d) {
+  const yr = d.getFullYear();
+  if (!_holidayCache[yr]) _holidayCache[yr] = usHolidays(yr);
+  return _holidayCache[yr].has(localIso(d));
+}
+function prevBusinessDay(d) {
+  let adj = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight, no UTC shift
+  while (adj.getDay() === 0 || adj.getDay() === 6 || isHoliday(adj)) {
+    adj.setDate(adj.getDate() - 1);
+  }
+  return adj;
+}
+// Returns YYYY-MM-DD of the previous business day if due falls on weekend/holiday
+function bizDay(due) { return localIso(prevBusinessDay(due)); }
+
+let settings = {
+  emails: 'credit@constitutioncp.com',
+  notifyDays: 3,
+  remindFreq: 7,
+  subject: '[Reminder] Financial Reporting Due — {company} · {period}',
+  body: `Dear {contact},\n\nThis is a reminder that {company}'s {report_type} for {period} was due on {due_date} and has not yet been received.\n\nPlease submit the required financials at your earliest convenience. If you have any questions, please reach out to your CCP contact directly.\n\nThank you,\nConstitution Capital Partners — Private Credit Team`
+};
+
+let companies = [
+  { id: 1, name: "Apex Medical Group", contact: "Sarah Chen", email: "s.chen@apexmedical.com", cadences: ['Quarterly Financials','Annual Financials','Annual Budget'], graceM: 30, graceQ: 45, graceA: 90, graceB: 30, fye: 12, commitmentDate: "2022-03-15", maturityDate: "2029-03-15", loanType: "Unitranche", commitmentAmt: 55.0 },
+  { id: 2, name: "Pinnacle Distribution", contact: "Mark Rivera", email: "mrivera@pinnacledist.com", cadences: ['Monthly Financials','Quarterly Financials','Annual Financials','Annual Budget'], graceM: 30, graceQ: 30, graceA: 90, graceB: 30, fye: 12, commitmentDate: "2021-07-20", maturityDate: "2028-07-20", loanType: "Term Loan B", commitmentAmt: 65.0 },
+  { id: 3, name: "Cascade Software", contact: "Jenna Park", email: "jenna.park@cascadesw.com", cadences: ['Quarterly Financials','Annual Financials','Annual Budget'], graceM: 30, graceQ: 45, graceA: 90, graceB: 30, fye: 12, commitmentDate: "2023-01-10", maturityDate: "2030-01-10", loanType: "Unitranche", commitmentAmt: 35.0 },
+  { id: 4, name: "Granite Building Services", contact: "Tom Hartley", email: "thartley@granitebldg.com", cadences: ['Quarterly Financials','Annual Financials','Annual Budget'], graceM: 30, graceQ: 45, graceA: 90, graceB: 45, fye: 12, commitmentDate: "2020-09-05", maturityDate: "2027-09-05", loanType: "Term Loan B", commitmentAmt: 47.0 }
+];
+
+// Seed deadlines are generated dynamically relative to today so they are always current
+function makeSeedDeadlines() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const yr = now.getFullYear();
+  const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return bizDay(r); };
+  const isoDate = (d) => d.toISOString().split('T')[0];
+  // Current quarter
+  const qtr = Math.floor(now.getMonth() / 3);
+  const qNames = ['Q1','Q2','Q3','Q4'];
+  const qEndMonths = [2, 5, 8, 11]; // 0-indexed month of quarter end
+  const prevQ = qtr === 0 ? 3 : qtr - 1;
+  const prevQYear = qtr === 0 ? yr - 1 : yr;
+  const prevQEnd = new Date(prevQYear, qEndMonths[prevQ] + 1, 0);
+  const curQEnd  = new Date(yr, qEndMonths[qtr] + 1, 0);
+  const nextQ    = (qtr + 1) % 4;
+  const nextQYear = qtr === 3 ? yr + 1 : yr;
+  const nextQEnd  = new Date(nextQYear, qEndMonths[nextQ] + 1, 0);
+  // Month helpers
+  const prevMonthEnd = new Date(yr, now.getMonth(), 0);
+  const prevPrevMonthEnd = new Date(yr, now.getMonth() - 1, 0);
+  const prevMonthName = prevMonthEnd.toLocaleDateString('en-US',{month:'long'});
+  const prevPrevMonthName = prevPrevMonthEnd.toLocaleDateString('en-US',{month:'long'});
+
+  return [
+    // Apex Medical — Quarterly reporter
+    { id:'d1',  companyId:1, company:"Apex Medical Group",       reportType:"Annual Financials",   period:`FY${yr-1}`,            dueDate:addDays(new Date(yr-1,11,31), 90),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 87),  status:"Received",  noticesSent:0, notes:"" },
+    { id:'d2',  companyId:1, company:"Apex Medical Group",       reportType:"Annual Budget",        period:`FY${yr} Budget`,       dueDate:addDays(new Date(yr-1,11,31), 30),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 35),  status:"Received",  noticesSent:0, notes:"" },
+    { id:'d3',  companyId:1, company:"Apex Medical Group",       reportType:"Quarterly Financials", period:`${qNames[prevQ]} ${prevQYear}`, dueDate:addDays(prevQEnd, 45), graceDays:0, receivedDate:null, status:"Overdue",  noticesSent:2, notes:"" },
+    { id:'d4',  companyId:1, company:"Apex Medical Group",       reportType:"Quarterly Financials", period:`${qNames[qtr]} ${yr}`, dueDate:addDays(curQEnd, 45),  graceDays:0, receivedDate:null, status:"Pending",  noticesSent:0, notes:"" },
+    { id:'d5',  companyId:1, company:"Apex Medical Group",       reportType:"Quarterly Financials", period:`${qNames[nextQ]} ${nextQYear}`, dueDate:addDays(nextQEnd, 45), graceDays:0, receivedDate:null, status:"Pending", noticesSent:0, notes:"" },
+    // Pinnacle Distribution — Monthly + Quarterly reporter
+    { id:'d6',  companyId:2, company:"Pinnacle Distribution",    reportType:"Annual Financials",    period:`FY${yr-1}`,            dueDate:addDays(new Date(yr-1,11,31), 90),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 92),  status:"Received",  noticesSent:1, notes:"Received 2 days late" },
+    { id:'d7',  companyId:2, company:"Pinnacle Distribution",    reportType:"Annual Budget",        period:`FY${yr} Budget`,       dueDate:addDays(new Date(yr-1,11,31), 30),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 29),  status:"Received",  noticesSent:0, notes:"" },
+    { id:'d8',  companyId:2, company:"Pinnacle Distribution",    reportType:"Monthly Financials",   period:`${prevPrevMonthName} ${yr}`, dueDate:addDays(prevPrevMonthEnd, 30), graceDays:0, receivedDate:null, status:"Overdue", noticesSent:1, notes:"" },
+    { id:'d9',  companyId:2, company:"Pinnacle Distribution",    reportType:"Monthly Financials",   period:`${prevMonthName} ${yr}`,    dueDate:addDays(prevMonthEnd, 30),     graceDays:0, receivedDate:null, status:"Pending", noticesSent:0, notes:"" },
+    { id:'d10', companyId:2, company:"Pinnacle Distribution",    reportType:"Quarterly Financials", period:`${qNames[prevQ]} ${prevQYear}`, dueDate:addDays(prevQEnd, 30), graceDays:0, receivedDate:addDays(prevQEnd, 28), status:"Received", noticesSent:0, notes:"" },
+    { id:'d11', companyId:2, company:"Pinnacle Distribution",    reportType:"Quarterly Financials", period:`${qNames[qtr]} ${yr}`,  dueDate:addDays(curQEnd, 30),  graceDays:0, receivedDate:null, status:"Pending",  noticesSent:0, notes:"" },
+    // Cascade Software — Quarterly reporter
+    { id:'d12', companyId:3, company:"Cascade Software",         reportType:"Annual Financials",    period:`FY${yr-1}`,            dueDate:addDays(new Date(yr-1,11,31), 90),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 84),  status:"Received",  noticesSent:0, notes:"" },
+    { id:'d13', companyId:3, company:"Cascade Software",         reportType:"Annual Budget",        period:`FY${yr} Budget`,       dueDate:addDays(new Date(yr-1,10,30), 30),  graceDays:0, receivedDate:addDays(new Date(yr-1,10,30), 40),  status:"Received",  noticesSent:1, notes:"Budget received late" },
+    { id:'d14', companyId:3, company:"Cascade Software",         reportType:"Quarterly Financials", period:`${qNames[prevQ]} ${prevQYear}`, dueDate:addDays(prevQEnd, 45), graceDays:0, receivedDate:addDays(prevQEnd, 42), status:"Received", noticesSent:0, notes:"" },
+    { id:'d15', companyId:3, company:"Cascade Software",         reportType:"Quarterly Financials", period:`${qNames[qtr]} ${yr}`,  dueDate:addDays(curQEnd, 45),  graceDays:0, receivedDate:null, status:"Pending",  noticesSent:0, notes:"" },
+    { id:'d16', companyId:3, company:"Cascade Software",         reportType:"Quarterly Financials", period:`${qNames[nextQ]} ${nextQYear}`, dueDate:addDays(nextQEnd, 45), graceDays:0, receivedDate:null, status:"Pending", noticesSent:0, notes:"" },
+    // Granite Building Services — Quarterly reporter, one overdue
+    { id:'d17', companyId:4, company:"Granite Building Services",reportType:"Annual Financials",    period:`FY${yr-1}`,            dueDate:addDays(new Date(yr-1,11,31), 90),  graceDays:0, receivedDate:null,                                  status:"Overdue",   noticesSent:3, notes:"Requesting extension" },
+    { id:'d18', companyId:4, company:"Granite Building Services",reportType:"Annual Budget",        period:`FY${yr} Budget`,       dueDate:addDays(new Date(yr-1,11,31), 45),  graceDays:0, receivedDate:addDays(new Date(yr-1,11,31), 44),  status:"Received",  noticesSent:0, notes:"" },
+    { id:'d19', companyId:4, company:"Granite Building Services",reportType:"Quarterly Financials", period:`${qNames[prevQ]} ${prevQYear}`, dueDate:addDays(prevQEnd, 45), graceDays:0, receivedDate:null, status:"Overdue",  noticesSent:2, notes:"" },
+    { id:'d20', companyId:4, company:"Granite Building Services",reportType:"Quarterly Financials", period:`${qNames[qtr]} ${yr}`,  dueDate:addDays(curQEnd, 45),  graceDays:0, receivedDate:null, status:"Pending",  noticesSent:0, notes:"" },
+    { id:'d21', companyId:4, company:"Granite Building Services",reportType:"Quarterly Financials", period:`${qNames[nextQ]} ${nextQYear}`, dueDate:addDays(nextQEnd, 45), graceDays:0, receivedDate:null, status:"Pending", noticesSent:0, notes:"" },
+  ];
+}
+let deadlines = makeSeedDeadlines();
+
+let activityLog = [
+  { ts: "2025-06-10T09:15:00", type: "notified",  text: "Overdue notice sent for Granite Building Services — Annual Financials FY2024. (3rd notice)", user: "System" },
+  { ts: "2025-06-03T11:30:00", type: "notified",  text: "Overdue notice sent for Granite Building Services — Q1 2025 Quarterly Financials. (2nd notice)", user: "System" },
+  { ts: "2025-06-01T10:00:00", type: "notified",  text: "Overdue notice sent for Apex Medical Group — Q1 2025 Quarterly Financials. (2nd notice)", user: "System" },
+  { ts: "2025-05-28T14:20:00", type: "notified",  text: "Overdue notice sent for Pinnacle Distribution — April 2025 Monthly Financials. (1st notice)", user: "System" },
+  { ts: "2025-05-20T09:00:00", type: "notified",  text: "Overdue notice sent for Apex Medical Group — Q1 2025 Quarterly Financials. (1st notice)", user: "J. Smith" },
+  { ts: "2025-05-12T16:45:00", type: "received",  text: "Cascade Software — Q1 2025 Quarterly Financials marked as received.", user: "J. Smith" },
+  { ts: "2025-04-28T10:30:00", type: "received",  text: "Pinnacle Distribution — Q1 2025 Quarterly Financials marked as received.", user: "J. Smith" },
+];
+
+let pendingNotifyId = null;
+let sortField = 'dueDate';
+let sortDir = 1;
+let trashBin = [];       // deleted items pending 30-day recovery
+let currentUser = '';    // set on first load via prompt
+let _fsFileHandle = null; // File System Access API handle (set when connected to shared file)
+
+// ─── FIREBASE CONFIGURATION ──────────────────────────────────────────────────
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │  PASTE YOUR FIREBASE CONFIG HERE after creating your Firebase project    │
+// └──────────────────────────────────────────────────────────────────────────┘
+const firebaseConfig = {
+  apiKey: "AIzaSyAVkkEAaIalLV9t87ig8nH0SiYNz9dgTjU",
+  authDomain: "ccp-tracker-c4f04.firebaseapp.com",
+  projectId: "ccp-tracker-c4f04",
+  storageBucket: "ccp-tracker-c4f04.firebasestorage.app",
+  messagingSenderId: "335584967712",
+  appId: "1:335584967712:web:32eb907d81bd5906c69045"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Firestore collection names
+const COL = {
+  companies:  'companies',
+  deadlines:  'deadlines',
+  settings:   'settings',
+  trash:      'trashBin'
+};
+
+// ─── FIRESTORE READ / WRITE ───────────────────────────────────────────────────
+let _saveQueue   = Promise.resolve();
+let _unsubscribe = []; // real-time listeners
+
+// Write all data to Firestore
+async function fbWrite() {
+  const batch = db.batch();
+  // Companies
+  companies.forEach(function(co) {
+    batch.set(db.collection(COL.companies).doc(String(co.id)), co);
+  });
+  // Deadlines
+  deadlines.forEach(function(d) {
+    batch.set(db.collection(COL.deadlines).doc(String(d.id)), d);
+  });
+  // Settings
+  batch.set(db.collection(COL.settings).doc('main'), settings);
+  // Trash — delete all then rewrite
+  var trashSnap = await db.collection(COL.trash).get();
+  trashSnap.forEach(function(doc) { batch.delete(doc.ref); });
+  trashBin.forEach(function(item, i) {
+    batch.set(db.collection(COL.trash).doc('trash_' + i), item);
+  });
+  await batch.commit();
+}
+
+// Read all data from Firestore
+async function fbRead() {
+  var results = await Promise.all([
+    db.collection(COL.companies).get(),
+    db.collection(COL.deadlines).get(),
+    db.collection(COL.settings).get(),
+    db.collection(COL.trash).get()
+  ]);
+  companies   = results[0].docs.map(function(d) { return d.data(); });
+  deadlines   = results[1].docs.map(function(d) { return d.data(); });
+  trashBin    = results[3].docs.map(function(d) { return d.data(); });
+  var setDoc  = results[2].docs[0];
+  if (setDoc) Object.assign(settings, setDoc.data());
+}
+
+// Start real-time listeners — updates appear instantly for all users
+function startListeners() {
+  _unsubscribe.forEach(function(u) { u(); });
+  _unsubscribe = [];
+
+  _unsubscribe.push(db.collection(COL.companies).onSnapshot(function(snap) {
+    companies = snap.docs.map(function(d) { return d.data(); });
+    renderTracker(); updateAlertBanner(); renderSettings();
+  }));
+
+  _unsubscribe.push(db.collection(COL.deadlines).onSnapshot(function(snap) {
+    deadlines = snap.docs.map(function(d) { return d.data(); });
+    normalizeDueDates();
+    renderTracker(); updateAlertBanner();
+    var calView = document.getElementById('view-calendar');
+    if (calView && calView.classList.contains('active')) renderCalendar();
+  }));
+
+  _unsubscribe.push(db.collection(COL.trash).onSnapshot(function(snap) {
+    trashBin = snap.docs.map(function(d) { return d.data(); });
+    var tab = document.getElementById('trash-tab');
+    if (tab) tab.textContent = trashBin.length > 0 ? ('Trash (' + trashBin.length + ')') : 'Trash';
+  }));
+
+  var ind = document.getElementById('save-indicator');
+  if (ind) { ind.textContent = '● Live sync active'; ind.style.color = '#1D8D90'; }
+}
+
+// saveData: write to Firestore (queued) + localStorage backup
+function saveData() {
+  // localStorage backup so data survives if Firestore is temporarily unavailable
+  try {
+    localStorage.setItem('ccp_fb_backup', JSON.stringify({ companies: companies, deadlines: deadlines, settings: settings, trashBin: trashBin }));
+  } catch(e) {}
+
+  _saveQueue = _saveQueue.then(function() {
+    return fbWrite().then(function() {
+      var ind = document.getElementById('save-indicator');
+      if (ind) {
+        ind.textContent = '● Saved';
+        ind.style.color = '#1D8D90';
+        setTimeout(function() {
+          ind.textContent = '● Live sync active';
+          ind.style.color = '#1D8D90';
+        }, 1500);
+      }
+    }).catch(function(e) {
+      console.error('Firestore write error:', e);
+      var ind = document.getElementById('save-indicator');
+      if (ind) { ind.textContent = '● Save error — check console'; ind.style.color = 'var(--negative)'; }
+    });
+  });
+}
+
+function logActivity(type, text) {
+  // Activity log not stored in this version
+}
+
+function saveBackup(label) {
+  try {
+    localStorage.setItem('ccp_fb_backup_' + label, JSON.stringify({
+      companies: companies, deadlines: deadlines, settings: settings, trashBin: trashBin,
+      ts: new Date().toISOString(), label: label
+    }));
+  } catch(e) {}
+}
+
+function restoreBackup(idx) {
+  showToast('Backups are managed by Firebase. Use the Firebase Console to view previous versions.');
+}
+
+function renderBackupList() {
+  var container = document.getElementById('backup-list');
+  if (container) container.innerHTML = '<div style="font-size:12px;color:#8a9bb0;">Backups are automatically managed by Firebase. Visit console.firebase.google.com to view history.</div>';
+}
+
+function clearAllData() {
+  spConfirm('Permanently delete ALL data from Firebase for EVERY user? This cannot be undone.').then(function(ok) {
+    if (!ok) return;
+    Promise.all([
+      db.collection(COL.companies).get().then(function(s) { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); }),
+      db.collection(COL.deadlines).get().then(function(s) { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); }),
+      db.collection(COL.trash).get().then(function(s)     { var b = db.batch(); s.forEach(function(d) { b.delete(d.ref); }); return b.commit(); })
+    ]).then(function() {
+      companies = []; deadlines = []; trashBin = [];
+      renderTracker(); updateAlertBanner();
+      showToast('All data cleared from Firebase.');
+    });
+  });
+}
+function applySnapshot(saved) {
+  if (saved.companies)   companies   = saved.companies;
+  if (saved.deadlines)   deadlines   = saved.deadlines;
+  if (saved.activityLog) activityLog = saved.activityLog;
+  if (saved.settings)    settings    = Object.assign(settings, saved.settings);
+  if (saved.trashBin)    trashBin    = saved.trashBin;
+}
+
+function loadData() {
+  try {
+    // Try current key first
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { applySnapshot(JSON.parse(raw)); return true; }
+
+    // Fall back to v1 to recover companies added before the key bump
+    const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (rawV1) {
+      applySnapshot(JSON.parse(rawV1));
+      saveData(); // re-save under v2 so future loads use the new key
+      console.log('CCP Tracker: migrated data from v1 to v2');
+      return true;
+    }
+
+    return false;
+  } catch(e) { return false; }
+}
+
+function clearAllData() {
+  if (!confirm('This will permanently delete all companies, deadlines, and history from this browser. The sample data will be reloaded. Continue?')) return;
+  saveBackup('pre-clear');
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_V1);
+  location.reload();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function parseDateStr(s) { if (!s) return null; const [y,m,d] = s.split('-'); return new Date(+y, +m-1, +d); }
+function fmtDate(s) { if (!s) return '—'; const d = parseDateStr(s); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function daysDiff(a, b) { return Math.round((b - a) / 86400000); }
+
+
+function computeStatus(dl) {
+  if (dl.status === 'Received' || dl.status === 'Waived') return dl.status;
+  const due = parseDateStr(dl.dueDate);
+  if (!due) return dl.status;
+  const diff = daysDiff(due, TODAY);
+  return diff > dl.graceDays ? 'Overdue' : 'Pending';
+}
+
+function getDaysDisplay(dl) {
+  const due = parseDateStr(dl.dueDate);
+  if (!due) return { text: '—', cls: '' };
+  const status = computeStatus(dl);
+  if (status === 'Received') {
+    const recv = parseDateStr(dl.receivedDate);
+    if (recv) {
+      const late = daysDiff(due, recv);
+      if (late > 0) return { text: `${late}d late`, cls: 'days-due-soon' };
+      return { text: `${Math.abs(late)}d early`, cls: 'days-ok' };
+    }
+    return { text: '—', cls: '' };
+  }
+  if (status === 'Waived') return { text: 'Waived', cls: '' };
+  const diff = daysDiff(due, TODAY);
+  if (diff > 0) return { text: `${diff}d overdue`, cls: 'days-overdue' };
+  if (diff >= -7) return { text: `Due in ${-diff}d`, cls: 'days-due-soon' };
+  return { text: `Due in ${-diff}d`, cls: 'days-ok' };
+}
+
+function getStatusBadge(status) {
+  const map = { Received: 'badge-received', Overdue: 'badge-overdue', Pending: 'badge-pending', Waived: 'badge-waived' };
+  return `<span class="badge ${map[status] || 'badge-na'}">${status}</span>`;
+}
+
+// ─── ALERT BANNER ────────────────────────────────────────────────────────────
+function updateAlertBanner() {
+  const overdue = deadlines.filter(d => computeStatus(d) === 'Overdue');
+  const banner = document.getElementById('alert-banner');
+  if (overdue.length > 0) {
+    banner.classList.add('show');
+    document.getElementById('alert-count').textContent = overdue.length;
+    document.getElementById('alert-text').textContent = `reporting deadline${overdue.length > 1 ? 's' : ''} ${overdue.length > 1 ? 'are' : 'is'} past due. Notices should be sent.`;
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    const tabs = ['tracker','calendar','settings','trash'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${tab}`).classList.add('active');
+  if (tab === 'tracker') renderTracker();
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'settings') renderSettings();
+  if (tab === 'trash') renderTrash();
+}
+
+// ─── TRACKER VIEW ─────────────────────────────────────────────────────────────
+function clearTrackerFilters() {
+  document.getElementById('filter-window').value = '90';
+  document.getElementById('filter-company').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-period').value = '';
+  sortField = 'dueDate'; sortDir = 1;
+  document.querySelectorAll('.rep-table thead th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.dataset.field === 'dueDate') th.classList.add('sort-asc');
+  });
+  renderTracker();
+}
+
+function checkAllDeadlines() {
+  deadlines.forEach(d => { if (d.status !== 'Received' && d.status !== 'Waived') d.status = computeStatus(d); });
+  renderTracker();
+  updateAlertBanner();
+  showToast('Statuses refreshed.');
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; }
+  document.querySelectorAll('.rep-table thead th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.field === field) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+  renderTracker();
+}
+
+function renderTracker() {
+  // KPIs
+  const allStatuses = deadlines.map(d => computeStatus(d));
+  const total = deadlines.length;
+  const received = allStatuses.filter(s => s === 'Received').length;
+  const overdue = allStatuses.filter(s => s === 'Overdue').length;
+  const pending = allStatuses.filter(s => s === 'Pending').length;
+  const compRate = total > 0 ? (received / total * 100).toFixed(0) : 0;
+
+  // Maturity summary
+  const maturingIn12 = companies.filter(c => { if (!c.maturityDate) return false; const d = daysDiff(TODAY, parseDateStr(c.maturityDate)); return d >= 0 && d <= 365; }).length;
+  const maturingIn6  = companies.filter(c => { if (!c.maturityDate) return false; const d = daysDiff(TODAY, parseDateStr(c.maturityDate)); return d >= 0 && d <= 180; }).length;
+  const matKpiVal = maturingIn6 > 0 ? maturingIn6 : maturingIn12;
+  const matKpiCls = maturingIn6 > 0 ? 'alert' : maturingIn12 > 0 ? 'warn' : 'ok';
+  const matKpiSub = maturingIn6 > 0 ? `${maturingIn6} within 6 months` : maturingIn12 > 0 ? `${maturingIn12} within 12 months` : 'No near-term maturities';
+
+  document.getElementById('tracker-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Deadlines</div><div class="kpi-value">${total}</div><div class="kpi-sub">All companies & periods</div></div>
+    <div class="kpi-card"><div class="kpi-label">Received</div><div class="kpi-value ok">${received}</div><div class="kpi-sub">Submitted on time or late</div></div>
+    <div class="kpi-card"><div class="kpi-label">Overdue</div><div class="kpi-value ${overdue > 0 ? 'alert' : 'ok'}">${overdue}</div><div class="kpi-sub">Past due, not received</div></div>
+    <div class="kpi-card"><div class="kpi-label">Pending</div><div class="kpi-value ${pending > 0 ? 'warn' : ''}">${pending}</div><div class="kpi-sub">Due date not yet passed</div></div>
+    <div class="kpi-card"><div class="kpi-label">Compliance Rate</div><div class="kpi-value ${compRate < 80 ? 'warn' : 'ok'}">${compRate}%</div><div class="kpi-sub">Received / total deadlines</div></div>
+    <div class="kpi-card"><div class="kpi-label">Maturing Loans</div><div class="kpi-value ${matKpiCls}">${matKpiVal > 0 ? matKpiVal : '—'}</div><div class="kpi-sub">${matKpiSub}</div></div>
+  `;
+
+  // Populate filters
+  const coFilter = document.getElementById('filter-company');
+  const existing = coFilter.value;
+  coFilter.innerHTML = '<option value="">All Companies</option>' + companies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  coFilter.value = existing;
+
+  const periods = [...new Set(deadlines.map(d => d.period))].sort();
+  const pFilter = document.getElementById('filter-period');
+  const pExisting = pFilter.value;
+  pFilter.innerHTML = '<option value="">All Periods</option>' + periods.map(p => `<option value="${p}">${p}</option>`).join('');
+  pFilter.value = pExisting;
+
+  // Window filter from dropdown
+  const windowDays = parseInt(document.getElementById('filter-window').value) || 0;
+  const showAll = windowDays === 0;
+  const windowEnd = new Date(TODAY); if (!showAll) windowEnd.setDate(windowEnd.getDate() + windowDays);
+
+  const coVal = document.getElementById('filter-company').value;
+  const typeVal = document.getElementById('filter-type').value;
+  const statusVal = document.getElementById('filter-status').value;
+  const periodVal = document.getElementById('filter-period').value;
+
+  // Build scope label
+  const winLabels = { 30:'Next 1 Month', 90:'Next 3 Months', 180:'Next 6 Months', 365:'Next 12 Months', 0:'All Deadlines' };
+  const scopeEl = document.getElementById('tracker-scope-label');
+  if (scopeEl) scopeEl.textContent = winLabels[windowDays] || 'Custom window';
+
+  let filtered = deadlines.filter(d => {
+    const s = computeStatus(d);
+    // Window filter: always include overdue; apply window to non-overdue
+    if (!showAll && s !== 'Overdue') {
+      const due = parseDateStr(d.dueDate);
+      if (!due) return false;
+      if (due > windowEnd) return false;
+    }
+    // Column filters
+    if (coVal && d.company !== coVal) return false;
+    if (typeVal && d.reportType !== typeVal) return false;
+    if (statusVal && s !== statusVal) return false;
+    if (periodVal && d.period !== periodVal) return false;
+    return true;
+  });
+
+  // Always sort by due date ascending by default; respect user column sort clicks
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortField === 'dueDate' || sortField === 'daysOverdue') {
+      av = a.dueDate || ''; bv = b.dueDate || '';
+    } else if (sortField === 'status') {
+      av = computeStatus(a); bv = computeStatus(b);
+    } else {
+      av = a[sortField] || ''; bv = b[sortField] || '';
+    }
+    return av > bv ? sortDir : av < bv ? -sortDir : 0;
+  });
+
+  const tbody = document.getElementById('tracker-body');
+  tbody.innerHTML = '';
+  filtered.forEach(d => {
+    const status = computeStatus(d);
+    const days = getDaysDisplay(d);
+    const trClass = status === 'Overdue' ? 'overdue' : status === 'Pending' ? 'pending' : status === 'Received' ? 'received' : '';
+    const co = companies.find(c => c.id === d.companyId);
+    const coForRow = companies.find(c => c.id === d.companyId);
+    let maturityCell = '—';
+    if (coForRow && coForRow.maturityDate) {
+      const mat = parseDateStr(coForRow.maturityDate);
+      const daysToMat = daysDiff(TODAY, mat);
+      const matLabel = mat.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      if (daysToMat < 0) maturityCell = `<span class="maturity-urgent">Matured</span>`;
+      else if (daysToMat <= 180) maturityCell = `<span class="maturity-urgent">${matLabel}<br><span style="font-size:10px;">${daysToMat}d away</span></span>`;
+      else if (daysToMat <= 365) maturityCell = `<span class="maturity-near">${matLabel}<br><span style="font-size:10px;">${Math.round(daysToMat/30)}mo away</span></span>`;
+      else maturityCell = `<span class="maturity-ok">${matLabel}</span>`;
+    }
+    tbody.innerHTML += `<tr class="${trClass}">
+      <td style="font-weight:600;">${d.company}</td>
+      <td>${maturityCell}</td>
+      <td>${d.reportType}</td>
+      <td>${d.period}</td>
+      <td style="font-family:monospace;">${fmtDate(d.dueDate)}</td>
+      <td style="text-align:center;color:#8a9bb0;">${d.graceDays > 0 ? `+${d.graceDays}d` : '—'}</td>
+      <td style="font-family:monospace;">${d.receivedDate ? fmtDate(d.receivedDate) : '—'}</td>
+      <td><span class="days-badge ${days.cls}">${days.text}</span></td>
+      <td>${getStatusBadge(status)}</td>
+      <td style="text-align:center;color:${d.noticesSent > 0 ? 'var(--warning)' : '#ccc'};">${d.noticesSent > 0 ? `${d.noticesSent} sent` : '—'}</td>
+      <td>
+        <div class="action-btns">
+          ${status !== 'Received' ? `<button class="btn-mark btn-mark-received" onclick="markReceived('${d.id}')">✓ Received</button>` : ''}
+          ${status === 'Overdue' ? `<button class="btn-mark btn-notify" onclick="openNotifyModal('${d.id}')">✉ Notify</button>` : ''}
+          ${status !== 'Waived' && status !== 'Received' ? `<button class="btn-mark btn-waive" onclick="waiveDeadline('${d.id}')">Waive</button>` : ''}
+          <button class="btn-mark" onclick="openEditDeadlineModal('${d.id}')" style="border-color:var(--ccp-rule);color:#5a7090;">✎ Edit</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:#8a9bb0;padding:24px;">No matching deadlines found.</td></tr>`;
+  }
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+function markReceived(id) {
+  const d = deadlines.find(x => x.id === id);
+  if (!d) return;
+  d.receivedDate = TODAY.toISOString().split('T')[0];
+  d.status = 'Received';
+  logActivity('received', `${d.company} — ${d.reportType} ${d.period} marked as received.`);
+  saveData(); renderTracker(); updateAlertBanner();
+  showToast(`${d.company} · ${d.period} marked as received.`);
+}
+
+function waiveDeadline(id) {
+  const d = deadlines.find(x => x.id === id);
+  if (!d) return;
+  d.status = 'Waived';
+  logActivity('waived', `${d.company} — ${d.reportType} ${d.period} waived.`);
+  saveData(); renderTracker(); updateAlertBanner();
+  showToast(`${d.period} waived for ${d.company}.`);
+}
+
+function openNotifyModal(id) {
+  const d = deadlines.find(x => x.id === id);
+  if (!d) return;
+  const co = companies.find(c => c.id === d.companyId);
+  pendingNotifyId = id;
+  document.getElementById('notify-to').textContent = co ? co.email : 'N/A';
+  document.getElementById('notify-cc').textContent = settings.emails;
+  const subj = settings.subject.replace('{company}', d.company).replace('{period}', d.period);
+  document.getElementById('notify-subject').textContent = subj;
+  const due = parseDateStr(d.dueDate);
+  const daysLate = daysDiff(due, TODAY);
+  const body = settings.body
+    .replace(/{contact}/g, co ? co.contact : 'Finance Team')
+    .replace(/{company}/g, d.company)
+    .replace(/{report_type}/g, d.reportType)
+    .replace(/{period}/g, d.period)
+    .replace(/{due_date}/g, fmtDate(d.dueDate));
+  document.getElementById('notify-body').value = body;
+  document.getElementById('notify-modal').classList.add('open');
+}
+
+function confirmNotify() {
+  const d = deadlines.find(x => x.id === pendingNotifyId);
+  if (!d) return;
+  // Copy to clipboard
+  const body = document.getElementById('notify-body').value;
+  const subj = document.getElementById('notify-subject').textContent;
+  const full = `Subject: ${subj}\n\n${body}`;
+  navigator.clipboard.writeText(full).catch(() => {});
+  d.noticesSent++;
+  logActivity('notified', `Overdue notice sent for ${d.company} — ${d.reportType} ${d.period}. (${d.noticesSent} notice${d.noticesSent > 1 ? 's' : ''})`);
+  saveData(); closeModal('notify-modal');
+  renderTracker(); updateAlertBanner();
+  showToast(`Notice logged. Email content copied to clipboard.`);
+}
+
+function notifyAllOverdue() {
+  const overdue = deadlines.filter(d => computeStatus(d) === 'Overdue');
+  if (overdue.length === 0) { showToast('No overdue items.'); return; }
+  if (overdue.length === 1) { openNotifyModal(overdue[0].id); return; }
+  overdue.forEach(d => {
+    d.noticesSent++;
+    logActivity('notified', `Bulk overdue notice logged for ${d.company} — ${d.reportType} ${d.period}.`);
+  });
+  saveData(); renderTracker(); updateAlertBanner();
+  showToast(`${overdue.length} overdue notices logged. Draft emails in your email client.`);
+}
+
+// ─── CALENDAR VIEW ────────────────────────────────────────────────────────────
+const CO_COLORS = [
+  { bg:'#dbeafe', border:'#2563eb', text:'#1e40af' },
+  { bg:'#d1fae5', border:'#059669', text:'#065f46' },
+  { bg:'#fef3c7', border:'#d97706', text:'#92400e' },
+  { bg:'#fce7f3', border:'#db2777', text:'#9d174d' },
+  { bg:'#ede9fe', border:'#7c3aed', text:'#4c1d95' },
+  { bg:'#ffedd5', border:'#ea580c', text:'#7c2d12' },
+];
+
+let calSelectedCompanies = new Set(); // empty = show all companies
+
+function toggleCalFilter(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('cal-filter-dropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display === 'block';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) buildCalendarFilter();
+}
+
+function buildCalendarFilter() {
+  const coList = [...new Set(deadlines.map(function(d) { return d.company; }))].sort();
+  const allSelected = calSelectedCompanies.size === 0;
+  const list = document.getElementById('cal-filter-list');
+  if (!list) return;
+  list.innerHTML = coList.map(function(name, i) {
+    const c = CO_COLORS[i % CO_COLORS.length];
+    const checked = allSelected || calSelectedCompanies.has(name);
+    const safeId = 'cal-co-' + i;
+    return '<label class="cal-co-row" for="' + safeId + '">' +
+      '<input type="checkbox" id="' + safeId + '" ' + (checked ? 'checked' : '') + ' data-company="' + i + '" onchange="onCalCoCheck()">' +
+      '<span class="cal-co-swatch" style="background:' + c.bg + ';border:1px solid ' + c.border + ';"></span>' +
+      '<span>' + name + '</span>' +
+    '</label>';
+  }).join('');
+  updateCalFilterLabel(coList);
+}
+
+function onCalCoCheck() {
+  const coList = [...new Set(deadlines.map(function(d) { return d.company; }))].sort();
+  const checkboxes = document.querySelectorAll('#cal-filter-list input[type=checkbox]');
+  calSelectedCompanies = new Set();
+  checkboxes.forEach(function(box, i) { if (box.checked) calSelectedCompanies.add(coList[i]); });
+  if (calSelectedCompanies.size === coList.length) calSelectedCompanies = new Set();
+  updateCalFilterLabel(coList);
+  renderCalendar();
+}
+
+function calSelectAll() {
+  calSelectedCompanies = new Set();
+  buildCalendarFilter();
+  renderCalendar();
+}
+
+function calSelectNone() {
+  const coList = [...new Set(deadlines.map(function(d) { return d.company; }))].sort();
+  if (coList.length) calSelectedCompanies = new Set([coList[0]]);
+  buildCalendarFilter();
+  renderCalendar();
+}
+
+function updateCalFilterLabel(coList) {
+  const label = document.getElementById('cal-filter-label');
+  if (!label) return;
+  if (calSelectedCompanies.size === 0) { label.textContent = 'All Companies'; return; }
+  if (calSelectedCompanies.size === 1) { label.textContent = [...calSelectedCompanies][0]; return; }
+  label.textContent = calSelectedCompanies.size + ' of ' + coList.length + ' Companies';
+}
+
+function renderCalendar() {
+  const container = document.getElementById('calendar-content');
+  if (!deadlines.length) {
+    container.innerHTML = '<div style="text-align:center;color:#8a9bb0;padding:40px;">No deadlines found. Add companies and auto-populate deadlines to see the calendar.</div>';
+    return;
+  }
+
+  const coList = [...new Set(deadlines.map(d => d.company))].sort();
+  const coColor = {};
+  coList.forEach((name, i) => coColor[name] = CO_COLORS[i % CO_COLORS.length]);
+
+  // Apply company filter (empty set = all companies)
+  const allCos = calSelectedCompanies.size === 0 || calSelectedCompanies.size === coList.length;
+  const activeCompanies = allCos ? new Set(coList) : calSelectedCompanies;
+
+  // Read window from dropdown; 0 = show all future
+  const calWindowSel = document.getElementById('cal-window-select');
+  const calDays = calWindowSel ? parseInt(calWindowSel.value) : 90;
+  const calShowAll = calDays === 0;
+  const end = new Date(TODAY);
+  if (!calShowAll) end.setDate(end.getDate() + calDays);
+  else end.setFullYear(end.getFullYear() + 20); // far future
+
+  // Update subtitle
+  const calSubtitle = document.getElementById('cal-subtitle');
+  if (calSubtitle) {
+    const labels = { 30: 'Next 1 Month', 90: 'Next 3 Months', 180: 'Next 6 Months', 365: 'Next 12 Months', 0: 'All Deadlines' };
+    calSubtitle.textContent = 'Upcoming reporting deadlines · ' + (labels[calDays] || 'Custom');
+  }
+
+  // Include overdue + window, filtered by selected companies
+  const inWindow = deadlines.filter(d => {
+    if (!activeCompanies.has(d.company)) return false;
+    const due = parseDateStr(d.dueDate);
+    if (!due) return false;
+    const st = computeStatus(d);
+    return st === 'Overdue' || due <= end;
+  });
+
+  // Legend
+  const legendHtml = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;background:#fff;border:1px solid var(--ccp-rule);padding:10px 14px;">
+    <span style="font-size:10px;font-weight:700;color:#8a9bb0;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;">Companies:</span>
+    ${coList.map(name => { const c = coColor[name]; return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';font-weight:600;">' + name + '</span>'; }).join('')}
+    <span style="margin-left:12px;font-size:10px;font-weight:700;color:#8a9bb0;text-transform:uppercase;letter-spacing:0.5px;">Status:</span>
+    <span style="font-size:11px;display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--negative);border-radius:50%;display:inline-block;"></span>Overdue</span>
+    <span style="font-size:11px;display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--warning);border-radius:50%;display:inline-block;"></span>Pending</span>
+    <span style="font-size:11px;display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--positive);border-radius:50%;display:inline-block;"></span>Received</span>
+    <span style="margin-left:auto;font-size:10px;color:#8a9bb0;">Click any deadline pill to edit</span>
+  </div>`;
+
+  // Build months from today through +120 days
+  const months = [];
+  let cur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  const endMonth = new Date(end.getFullYear(), end.getMonth() + 1, 1);
+  while (cur < endMonth) { months.push(new Date(cur)); cur.setMonth(cur.getMonth() + 1); }
+
+  // Index deadlines by YYYY-MM-DD
+  const dlByDate = {};
+  inWindow.forEach(d => { if (!dlByDate[d.dueDate]) dlByDate[d.dueDate] = []; dlByDate[d.dueDate].push(d); });
+
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const monthsHtml = months.map(monthStart => {
+    const monthLabel = monthStart.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    const firstDow = monthStart.getDay();
+    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth()+1, 0).getDate();
+    const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+
+    const cellsArr = [];
+    for (let i = 0; i < totalCells; i++) {
+      const dayNum = i - firstDow + 1;
+      const isValid = dayNum >= 1 && dayNum <= daysInMonth;
+      const cellDate = isValid ? new Date(monthStart.getFullYear(), monthStart.getMonth(), dayNum) : null;
+      const dateStr = cellDate ? cellDate.toISOString().split('T')[0] : null;
+      const isToday = cellDate && daysDiff(TODAY, cellDate) === 0;
+      const isWeekend = cellDate && (cellDate.getDay() === 0 || cellDate.getDay() === 6);
+      const isInWindow = cellDate && cellDate >= TODAY && cellDate <= end;
+      const isPast = cellDate && cellDate < TODAY;
+
+      let bgStyle = '';
+      if (!isValid) bgStyle = 'background:#f4f6f9;';
+      else if (isToday) bgStyle = 'background:#e0ecf8;';
+      else if (isWeekend) bgStyle = 'background:#fafafa;';
+      else if (!isInWindow && !isPast) bgStyle = 'background:#f9f9f9;';
+
+      const dls = (dateStr && dlByDate[dateStr]) || [];
+
+      const dayNumHtml = isValid
+        ? '<div style="font-size:10px;font-weight:' + (isToday?'800':'400') + ';color:' + (isToday?'var(--ccp-primary-navy)':isPast?'#bbb':'#444') + ';text-align:right;margin-bottom:2px;line-height:1;">' + dayNum + (isToday?' •':'') + '</div>'
+        : '';
+
+      const pills = dls.map(d => {
+        const st = computeStatus(d);
+        const c = coColor[d.company] || CO_COLORS[0];
+        const dot = st === 'Overdue' ? 'var(--negative)' : st === 'Received' ? 'var(--positive)' : 'var(--warning)';
+        const shortCo = d.company.split(' ')[0];
+        const shortType = d.reportType.replace(' Financials','').replace('Annual ','A-').replace('Quarterly','Q').replace('Monthly','M');
+        return '<div onclick="openEditDeadlineModal(\'' + d.id + '\')" title="' + d.company + ' — ' + d.reportType + ' ' + d.period + '\nDue: ' + fmtDate(d.dueDate) + '\nStatus: ' + st + '" style="cursor:pointer;margin-bottom:2px;padding:1px 3px;background:' + c.bg + ';border-left:3px solid ' + dot + ';font-size:9px;color:' + c.text + ';font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4;">' + shortCo + ' ' + shortType + '</div>';
+      }).join('');
+
+      cellsArr.push('<td style="width:14.28%;vertical-align:top;padding:4px 3px;border:1px solid #e5e8ed;min-height:68px;' + bgStyle + '">' + dayNumHtml + pills + '</td>');
+    }
+
+    let rows = '';
+    for (let r = 0; r < cellsArr.length / 7; r++) {
+      rows += '<tr>' + cellsArr.slice(r*7, r*7+7).join('') + '</tr>';
+    }
+
+    const monthDls = inWindow.filter(d => {
+      const due = parseDateStr(d.dueDate);
+      return due && due.getMonth() === monthStart.getMonth() && due.getFullYear() === monthStart.getFullYear();
+    });
+    const mOverdue = monthDls.filter(d => computeStatus(d) === 'Overdue').length;
+    const mPending = monthDls.filter(d => computeStatus(d) === 'Pending').length;
+    const mReceived = monthDls.filter(d => computeStatus(d) === 'Received').length;
+
+    return '<div style="background:#fff;border:1px solid var(--ccp-rule);margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:var(--ccp-dark-navy);">' +
+        '<span style="font-family:\'Century Schoolbook\',\'Source Serif Pro\',Georgia,serif;font-size:14px;font-weight:700;color:#fff;">' + monthLabel + '</span>' +
+        '<span style="font-size:10px;color:#aabdd3;display:flex;gap:10px;">' +
+          (mOverdue ? '<span style="color:#fca5a5;">⬤ ' + mOverdue + ' overdue</span>' : '') +
+          (mPending ? '<span style="color:#fcd34d;">⬤ ' + mPending + ' pending</span>' : '') +
+          (mReceived ? '<span style="color:#6ee7b7;">⬤ ' + mReceived + ' received</span>' : '') +
+          '<span>' + monthDls.length + ' total</span>' +
+        '</span>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">' +
+        '<thead><tr>' + DOW.map(d => '<th style="padding:5px;text-align:center;font-size:10px;font-weight:700;color:#8a9bb0;border-bottom:1px solid var(--ccp-rule);letter-spacing:0.5px;">' + d + '</th>').join('') + '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }).join('');
+
+  container.innerHTML = legendHtml + monthsHtml;
+}
+
+// ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
+function maturityBadge(co) {
+  if (!co.maturityDate) return '<span style="color:#ccc;">—</span>';
+  const mat = parseDateStr(co.maturityDate);
+  const days = daysDiff(TODAY, mat);
+  const label = mat.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  if (days < 0) return `<span class="badge badge-maturity" style="background:#fde8e8;color:var(--negative);">Matured · ${label}</span>`;
+  if (days <= 180) return `<span class="badge badge-maturity" style="background:#fde8e8;color:var(--negative);">${label} · ${days}d</span>`;
+  if (days <= 365) return `<span class="badge badge-maturity" style="background:#fdf0e0;color:var(--warning);">${label} · ${Math.round(days/30)}mo</span>`;
+  return `<span class="badge badge-maturity">${label}</span>`;
+}
+
+function renderCompanyDeadlines(coId) {
+  const panel = document.getElementById(`cdp-${coId}`);
+  if (!panel) return;
+  const coDls = deadlines.filter(d => d.companyId === coId).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  if (coDls.length === 0) {
+    const bodyEl2 = document.getElementById(`cdp-body-${coId}`) || panel;
+    bodyEl2.innerHTML = '<div style="padding:12px 14px;font-size:11px;color:#8a9bb0;">No deadlines configured. Use the + Add Deadline button above.</div>';
+    return;
+  }
+  const bodyEl = document.getElementById(`cdp-body-${coId}`) || panel;
+  bodyEl.innerHTML = `<table>
+    <thead><tr>
+      <th>Report Type</th><th>Period</th><th>Due Date</th><th>Status</th><th>Received</th><th>Extension / Notes</th><th></th>
+    </tr></thead>
+    <tbody>${coDls.map(d => {
+      const st = computeStatus(d);
+      const badgeCls = { Received:'badge-received', Overdue:'badge-overdue', Pending:'badge-pending', Waived:'badge-waived' }[st] || 'badge-na';
+      return `<tr>
+        <td>${d.reportType}</td>
+        <td>${d.period}</td>
+        <td style="font-family:monospace;">${fmtDate(d.dueDate)}</td>
+        <td><span class="badge ${badgeCls}">${st}</span></td>
+        <td style="font-family:monospace;">${d.receivedDate ? fmtDate(d.receivedDate) : '—'}</td>
+        <td style="color:#5a7090;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${d.notes || '—'}</td>
+        <td><button class="btn-icon btn-sm" onclick="openEditDeadlineModal('${d.id}')">✎ Edit</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function toggleCompanyDeadlines(coId) {
+  const panel = document.getElementById(`cdp-${coId}`);
+  const btn = document.getElementById(`cdp-btn-${coId}`);
+  if (!panel) return;
+  if (panel.style.display === 'none' || panel.style.display === '') {
+    panel.style.display = 'block';
+    renderCompanyDeadlines(coId);
+    btn.textContent = '▲ Hide Deadlines';
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = '▼ Manage Deadlines';
+  }
+}
+
+function renderSettings() {
+  document.getElementById('setting-emails').value = settings.emails;
+  document.getElementById('setting-notify-days').value = settings.notifyDays;
+  document.getElementById('setting-remind-freq').value = settings.remindFreq;
+  document.getElementById('setting-subject').value = settings.subject;
+  document.getElementById('setting-body').value = settings.body;
+
+  const list = document.getElementById('company-settings-list');
+  list.innerHTML = companies.map(co => {
+    const mat = co.maturityDate ? parseDateStr(co.maturityDate) : null;
+    const daysToMat = mat ? daysDiff(TODAY, mat) : null;
+    return `
+    <div class="company-setup-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="flex:1;">
+          <div class="company-setup-name" style="margin-bottom:6px;">${co.name}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${co.cadences.map(c => `<span class="setup-badge">${c}</span>`).join('')}
+            <span class="setup-badge" style="background:#f0f0f0;color:#8a9bb0;">Grace: Q/M ${co.graceQ}d · Annual ${co.graceA}d</span>
+            ${co.loanType ? `<span class="setup-badge" style="background:#eef3f9;color:var(--ccp-deep-blue);">${co.loanType}</span>` : ''}
+            ${co.commitmentAmt ? `<span class="setup-badge" style="background:#eef3f9;color:var(--ccp-deep-blue);">$${co.commitmentAmt.toFixed(1)}M</span>` : ''}
+            ${maturityBadge(co)}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          <button class="btn-icon btn-sm" onclick="openEditCompanyModal(${co.id})">✎ Edit</button>
+          <button class="btn-icon btn-sm" id="cdp-btn-${co.id}" onclick="toggleCompanyDeadlines(${co.id})">▼ Manage Deadlines</button>
+          <button class="btn-icon btn-sm" onclick="deleteCompany(${co.id})" style="border-color:#e0b0b0;color:var(--negative);">Delete</button>
+        </div>
+      </div>
+      <div class="company-deadlines-panel" id="cdp-${co.id}" style="display:none;">
+        <div class="cdp-header">
+          <span>Reporting Deadlines — ${co.name}</span>
+          <button class="btn-icon btn-sm" onclick="autoPopulateDeadlines(co_${co.id}(), 'current_year');renderCompanyDeadlines(${co.id});saveData();" style="font-size:10px;">↻ Re-populate Current Year</button>
+        </div>
+        <div id="cdp-body-${co.id}"></div>
+      </div>
+    </div>`;
+  }).join('') + `
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--ccp-rule);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:11px;color:#8a9bb0;">Data is automatically saved to this browser. To start fresh, clear all data below.</div>
+      <button class="btn-icon btn-sm" onclick="clearAllData()" style="border-color:#e0b0b0;color:var(--negative);">Clear All Data</button>
+    </div>`;
+
+  // Expose each company as a getter function for the inline onclick
+  companies.forEach(co => {
+    window[`co_${co.id}`] = () => co;
+  });
+}
+
+function saveSettings() {
+  settings.emails = document.getElementById('setting-emails').value;
+  settings.notifyDays = parseInt(document.getElementById('setting-notify-days').value) || 3;
+  settings.remindFreq = parseInt(document.getElementById('setting-remind-freq').value) || 7;
+  settings.subject = document.getElementById('setting-subject').value;
+  settings.body = document.getElementById('setting-body').value;
+  saveData();
+  showToast('Settings saved.');
+}
+
+
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openAddCompanyModal() {
+  const sel = document.getElementById('dl-company');
+  sel.innerHTML = companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('add-company-modal').classList.add('open');
+}
+
+// ─── DEADLINE MODAL HELPERS ───────────────────────────────────────────────────
+function dlPopulateYears() {
+  const sel = document.getElementById('dl-year');
+  const cur = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (let y = cur - 2; y <= cur + 2; y++) {
+    sel.innerHTML += `<option value="${y}" ${y === cur ? 'selected' : ''}>${y}</option>`;
+  }
+}
+
+function onDlCompanyChange() { onDlPeriodChange(); }
+
+function onDlTypeChange() {
+  const type = document.getElementById('dl-type').value;
+  document.getElementById('dl-month-wrap').style.display   = type === 'Monthly Financials'  ? '' : 'none';
+  document.getElementById('dl-quarter-wrap').style.display = type === 'Quarterly Financials' ? '' : 'none';
+  onDlPeriodChange();
+}
+
+function onDlPeriodChange() {
+  const type  = document.getElementById('dl-type').value;
+  const year  = parseInt(document.getElementById('dl-year').value);
+  const month = parseInt(document.getElementById('dl-month').value);
+  const qtr   = parseInt(document.getElementById('dl-quarter').value);
+  const coId  = parseInt(document.getElementById('dl-company').value);
+  const co    = companies.find(c => c.id === coId);
+
+  let periodLabel = '';
+  let dueDate     = '';
+  let hintText    = '';
+
+  if (type === 'Monthly Financials') {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    periodLabel = `${monthNames[month-1]} ${year}`;
+    const graceM = (co && co.graceM) ? co.graceM : 30;
+    const monthEnd = new Date(year, month, 0);
+    const due = new Date(monthEnd.getTime() + graceM * 86400000);
+    dueDate = bizDay(due);
+    hintText = `${graceM} days after month end (${monthEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
+
+  } else if (type === 'Quarterly Financials') {
+    const qLabels = ['','Q1','Q2','Q3','Q4'];
+    const qEndMonth = [0, 3, 6, 9, 12];
+    periodLabel = `${qLabels[qtr]} ${year}`;
+    const graceQ = (co && co.graceQ) ? co.graceQ : 45;
+    const qEnd = new Date(year, qEndMonth[qtr], 0);
+    const due  = new Date(qEnd.getTime() + graceQ * 86400000);
+    dueDate = bizDay(due);
+    hintText = `${graceQ} days after quarter end (${qEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
+
+  } else if (type === 'Annual Financials') {
+    periodLabel = `FY${year}`;
+    const graceA = (co && co.graceA) ? co.graceA : 90;
+    const fyeMonth = (co && co.fye) ? co.fye : 12;
+    const fyeEnd = new Date(year, fyeMonth, 0);
+    const due = new Date(fyeEnd.getTime() + graceA * 86400000);
+    dueDate = bizDay(due);
+    hintText = `${graceA} days after fiscal year end (${fyeEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
+
+  } else if (type === 'Annual Budget') {
+    periodLabel = `FY${year} Budget`;
+    const graceB = (co && co.graceB) ? co.graceB : 30;
+    const fyeMonthB = (co && co.fye) ? co.fye : 12;
+    const fyeEndPrior = new Date(year - 1, fyeMonthB, 0); // FYE of prior fiscal year
+    const due = new Date(fyeEndPrior.getTime() + graceB * 86400000);
+    dueDate = bizDay(due);
+    hintText = `${graceB} days after fiscal year end (${fyeEndPrior.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
+  }
+
+  document.getElementById('dl-period-preview').textContent = periodLabel || '—';
+  // Only pre-fill due date if currently empty or was previously auto-filled
+  const dueFld = document.getElementById('dl-due');
+  if (!dueFld.dataset.manual) dueFld.value = dueDate;
+  document.getElementById('dl-due-hint').textContent = hintText;
+}
+
+function openAddDeadlineModal() {
+  const sel = document.getElementById('dl-company');
+  sel.innerHTML = companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  dlPopulateYears();
+  document.getElementById('dl-modal-title').textContent = 'Add Reporting Deadline';
+  document.getElementById('dl-save-btn').textContent = 'Add Deadline';
+  document.getElementById('dl-editing-id').value = '';
+  document.getElementById('dl-delete-btn').style.display = 'none';
+  document.getElementById('dl-grace').value = '0';
+  document.getElementById('dl-received').value = '';
+  document.getElementById('dl-notes').value = '';
+  document.getElementById('dl-status').value = 'Pending';
+  document.getElementById('dl-type').value = 'Quarterly Financials';
+  document.getElementById('dl-due').dataset.manual = '';
+  onDlTypeChange();
+  document.getElementById('add-deadline-modal').classList.add('open');
+}
+
+function openEditDeadlineModal(id) {
+  const d = deadlines.find(x => x.id === id);
+  if (!d) return;
+  const sel = document.getElementById('dl-company');
+  sel.innerHTML = companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  dlPopulateYears();
+  document.getElementById('dl-modal-title').textContent = 'Edit Reporting Deadline';
+  document.getElementById('dl-save-btn').textContent = 'Save Changes';
+  document.getElementById('dl-editing-id').value = id;
+  document.getElementById('dl-delete-btn').style.display = 'inline-block';
+  sel.value = d.companyId;
+  document.getElementById('dl-type').value = d.reportType;
+  document.getElementById('dl-grace').value = d.graceDays;
+  document.getElementById('dl-status').value = d.status;
+  document.getElementById('dl-received').value = d.receivedDate || '';
+  document.getElementById('dl-notes').value = d.notes || '';
+  // Restore period selectors from stored period label
+  const p = d.period; // e.g. "Q3 2024", "March 2024", "FY2024", "FY2025 Budget"
+  const yearMatch = p.match(/\d{4}/);
+  if (yearMatch) {
+    const yr = parseInt(yearMatch[0]);
+    dlPopulateYears();
+    // Ensure the stored year exists in the dropdown, add if needed
+    const yrSel = document.getElementById('dl-year');
+    if (![...yrSel.options].some(o => parseInt(o.value) === yr)) {
+      yrSel.innerHTML = `<option value="${yr}">${yr}</option>` + yrSel.innerHTML;
+    }
+    yrSel.value = yr;
+  }
+  if (d.reportType === 'Quarterly Financials') {
+    const qm = p.match(/Q([1-4])/i);
+    if (qm) document.getElementById('dl-quarter').value = qm[1];
+  }
+  if (d.reportType === 'Monthly Financials') {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const mi = months.findIndex(m => p.startsWith(m));
+    if (mi >= 0) document.getElementById('dl-month').value = mi + 1;
+  }
+  onDlTypeChange();
+  // Override due date with the stored value (mark as manual so it isn't overwritten)
+  document.getElementById('dl-due').value = d.dueDate;
+  document.getElementById('dl-due').dataset.manual = '1';
+  document.getElementById('dl-period-preview').textContent = d.period;
+  document.getElementById('add-deadline-modal').classList.add('open');
+}
+
+// When user manually changes due date, lock it so auto-calc doesn't overwrite
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dl-due').addEventListener('change', function() {
+    this.dataset.manual = '1';
+  });
+});
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openAddCompanyModal() {
+  document.getElementById('co-modal-title').textContent = 'Add Portfolio Company';
+  document.getElementById('co-save-btn').textContent = 'Add Company';
+  document.getElementById('co-editing-id').value = '';
+  document.getElementById('co-modal-left-btn').innerHTML = '';
+  // Reset all fields to defaults
+  ['co-name','co-contact','co-email','co-commitment-date','co-maturity-date','co-commitment-amt'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('co-grace-m').value = '30';
+  document.getElementById('co-grace-q').value = '45';
+  document.getElementById('co-grace-a').value = '90';
+  document.getElementById('co-grace-b').value = '30';
+  document.getElementById('co-fye').value = '12';
+  document.getElementById('co-loan-type').value = 'Term Loan B';
+  document.getElementById('co-auto-populate').value = 'current_year';
+  document.getElementById('co-populate-wrap').style.display = '';
+  document.getElementById('co-recalc-wrap').style.display = 'none';
+  document.getElementById('co-recalc-check').checked = false;
+  document.getElementById('cadence-monthly').checked = false;
+  document.getElementById('cadence-quarterly').checked = true;
+  document.getElementById('cadence-annual').checked = true;
+  document.getElementById('cadence-budget').checked = true;
+  document.getElementById('add-company-modal').classList.add('open');
+}
+
+function openEditCompanyModal(id) {
+  const co = companies.find(c => c.id === id);
+  if (!co) return;
+  document.getElementById('co-modal-title').textContent = 'Edit Portfolio Company';
+  document.getElementById('co-save-btn').textContent = 'Save Changes';
+  document.getElementById('co-editing-id').value = id;
+  document.getElementById('co-modal-left-btn').innerHTML = `<button class="btn-icon btn-sm" onclick="deleteCompany(${id});closeModal('add-company-modal');" style="border-color:#e0b0b0;color:var(--negative);">Delete Company</button>`;
+  // Pre-fill all fields
+  document.getElementById('co-name').value = co.name;
+  document.getElementById('co-contact').value = co.contact || '';
+  document.getElementById('co-email').value = co.email || '';
+  document.getElementById('co-grace-m').value = co.graceM || 30;
+  document.getElementById('co-grace-q').value = co.graceQ || 45;
+  document.getElementById('co-grace-a').value = co.graceA || 90;
+  document.getElementById('co-grace-b').value = co.graceB || 30;
+  document.getElementById('co-fye').value = co.fye || 12;
+  document.getElementById('co-commitment-date').value = co.commitmentDate || '';
+  document.getElementById('co-maturity-date').value = co.maturityDate || '';
+  document.getElementById('co-loan-type').value = co.loanType || 'Term Loan B';
+  document.getElementById('co-commitment-amt').value = co.commitmentAmt || '';
+  document.getElementById('co-auto-populate').value = 'none';
+  document.getElementById('co-populate-wrap').style.display = 'none';
+  document.getElementById('co-recalc-wrap').style.display = '';
+  document.getElementById('co-recalc-check').checked = false;
+  document.getElementById('cadence-monthly').checked = co.cadences.includes('Monthly Financials');
+  document.getElementById('cadence-quarterly').checked = co.cadences.includes('Quarterly Financials');
+  document.getElementById('cadence-annual').checked = co.cadences.includes('Annual Financials');
+  document.getElementById('cadence-budget').checked = co.cadences.includes('Annual Budget');
+  document.getElementById('add-company-modal').classList.add('open');
+}
+
+function saveCompany() {
+  const name = document.getElementById('co-name').value.trim();
+  if (!name) { showToast('Company name is required.'); return; }
+  const cadences = [];
+  if (document.getElementById('cadence-monthly').checked) cadences.push('Monthly Financials');
+  if (document.getElementById('cadence-quarterly').checked) cadences.push('Quarterly Financials');
+  if (document.getElementById('cadence-annual').checked) cadences.push('Annual Financials');
+  if (document.getElementById('cadence-budget').checked) cadences.push('Annual Budget');
+
+  const editingId = document.getElementById('co-editing-id').value;
+  const fields = {
+    name,
+    contact: document.getElementById('co-contact').value || 'Finance Team',
+    email: document.getElementById('co-email').value || '',
+    cadences,
+    graceM: parseInt(document.getElementById('co-grace-m').value) || 30,
+    graceQ: parseInt(document.getElementById('co-grace-q').value) || 45,
+    graceA: parseInt(document.getElementById('co-grace-a').value) || 90,
+    graceB: parseInt(document.getElementById('co-grace-b').value) || 30,
+    fye: parseInt(document.getElementById('co-fye').value) || 12,
+    commitmentDate: document.getElementById('co-commitment-date').value || null,
+    maturityDate: document.getElementById('co-maturity-date').value || null,
+    loanType: document.getElementById('co-loan-type').value,
+    commitmentAmt: parseFloat(document.getElementById('co-commitment-amt').value) || null
+  };
+
+  const autoMode = document.getElementById('co-auto-populate').value;
+
+  if (editingId) {
+    // Edit existing
+    const idx = companies.findIndex(c => c.id === parseInt(editingId) || c.id === editingId);
+    if (idx < 0) return;
+    Object.assign(companies[idx], fields);
+    // Update company name on existing deadlines if name changed
+    deadlines.filter(d => d.companyId === companies[idx].id).forEach(d => d.company = name);
+    logActivity('edited', `${name} company details updated.`);
+    if (autoMode !== 'none') autoPopulateDeadlines(companies[idx], autoMode);
+    const doRecalc = document.getElementById('co-recalc-check') && document.getElementById('co-recalc-check').checked;
+    if (doRecalc) {
+      const recalcCount = recalcDeadlines(companies[idx]);
+      logActivity('edited', `${name} — ${recalcCount} pending/future deadline(s) recalculated with updated grace days.`);
+      showToast(`${name} updated. ${recalcCount} deadline(s) recalculated.`);
+    } else {
+      showToast(`${name} updated.`);
+    }
+    closeModal('add-company-modal');
+    saveData(); renderTracker(); updateAlertBanner(); renderSettings();
+  } else {
+    // Add new
+    const co = { id: Date.now(), ...fields };
+    companies.push(co);
+    if (autoMode !== 'none') autoPopulateDeadlines(co, autoMode);
+    logActivity('added', `${name} added to portfolio.`);
+    closeModal('add-company-modal');
+    saveData(); renderTracker(); updateAlertBanner();
+    showToast(`${name} added${autoMode !== 'none' ? ' with deadlines auto-populated' : ''}.`);
+  }
+}
+
+function recalcDeadlines(co) {
+  // Bulletproof recalc: delete all future pending/overdue deadlines for this
+  // company, then regenerate them from scratch using the updated grace days.
+  // Received and Waived deadlines are preserved untouched.
+  // "Future" = the stored due date is today or later (even if wrong, we replace it).
+  var kept = 0, removed = 0;
+  deadlines = deadlines.filter(function(d) {
+    if (d.companyId !== co.id) return true;        // keep other companies
+    if (d.status === 'Received' || d.status === 'Waived') { kept++; return true; } // keep closed
+    // Remove any pending/overdue with a due date >= today (will be regenerated)
+    // AND any with a due date in the past (stale records from wrong grace days)
+    removed++;
+    return false;
+  });
+
+  // Regenerate from scratch using autoPopulateDeadlines (current_year + full_term)
+  // Determine the right scope: if maturityDate exists use full_term, else current_year
+  var mode = co.maturityDate ? 'full_term' : 'current_year';
+  autoPopulateDeadlines(co, mode);
+
+  var added = deadlines.filter(function(d) { return d.companyId === co.id && d.status !== 'Received' && d.status !== 'Waived'; }).length;
+  normalizeDueDates();
+  return added;
+}
+
+function autoPopulateDeadlines(co, mode) {
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const matDate = co.maturityDate ? parseDateStr(co.maturityDate) : null;
+  const endYear = (mode === 'full_term' && matDate) ? matDate.getFullYear() : curYear;
+  const startYear = co.commitmentDate ? parseDateStr(co.commitmentDate).getFullYear() : curYear;
+  const fyeMonth = co.fye || 12;
+  const graceM = co.graceM || 30;
+  const graceQ = co.graceQ || 45;
+  const graceA = co.graceA || 90;
+  const graceB = co.graceB || 30;
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const qLabels = ['Q1','Q2','Q3','Q4'];
+  const qEndMonths = [3, 6, 9, 12];
+  // Only create deadlines on or after today
+  const isFuture = (due) => due >= TODAY;
+
+  for (let yr = startYear; yr <= endYear; yr++) {
+    // Annual Financials: graceA days after FYE
+    if (co.cadences.includes('Annual Financials')) {
+      const fyeEnd = new Date(yr, fyeMonth, 0);
+      const due = new Date(fyeEnd.getTime() + graceA * 86400000);
+      const existing = deadlines.find(d => d.companyId === co.id && d.reportType === 'Annual Financials' && d.period === `FY${yr}`);
+      if (!existing && isFuture(due)) {
+        deadlines.push({ id: 'd' + Date.now() + Math.random(), companyId: co.id, company: co.name,
+          reportType: 'Annual Financials', period: `FY${yr}`, dueDate: bizDay(due),
+          graceDays: 0, receivedDate: null, status: 'Pending', noticesSent: 0, notes: '' });
+      }
+    }
+    // Annual Budget: graceB days after fiscal year end (budget for next year due graceB days after current FYE)
+    if (co.cadences.includes('Annual Budget')) {
+      const fyeEnd = new Date(yr - 1, fyeMonth, 0); // FYE of the prior year (e.g. Dec 31 2024 for FY2025 budget)
+      const budgetDue = new Date(fyeEnd.getTime() + graceB * 86400000);
+      const period = `FY${yr} Budget`;
+      const existing = deadlines.find(d => d.companyId === co.id && d.reportType === 'Annual Budget' && d.period === period);
+      if (!existing && isFuture(budgetDue)) {
+        deadlines.push({ id: 'd' + Date.now() + Math.random(), companyId: co.id, company: co.name,
+          reportType: 'Annual Budget', period, dueDate: bizDay(budgetDue),
+          graceDays: 0, receivedDate: null, status: 'Pending', noticesSent: 0, notes: '' });
+      }
+    }
+    // Quarterly Financials: graceQ days after each quarter end
+    if (co.cadences.includes('Quarterly Financials')) {
+      for (let q = 0; q < 4; q++) {
+        const qEnd = new Date(yr, qEndMonths[q], 0);
+        const due = new Date(qEnd.getTime() + graceQ * 86400000);
+        const period = `${qLabels[q]} ${yr}`;
+        const existing = deadlines.find(d => d.companyId === co.id && d.reportType === 'Quarterly Financials' && d.period === period);
+        if (!existing && isFuture(due)) {
+          deadlines.push({ id: 'd' + Date.now() + Math.random(), companyId: co.id, company: co.name,
+            reportType: 'Quarterly Financials', period, dueDate: bizDay(due),
+            graceDays: 0, receivedDate: null, status: 'Pending', noticesSent: 0, notes: '' });
+        }
+      }
+    }
+    // Monthly Financials: graceM days after each month end
+    if (co.cadences.includes('Monthly Financials')) {
+      for (let m = 1; m <= 12; m++) {
+        const period = `${monthNames[m-1]} ${yr}`;
+        const monthEnd = new Date(yr, m, 0); // last day of month m
+        const due = new Date(monthEnd.getTime() + graceM * 86400000);
+        const dueDate = bizDay(due);
+        const existing = deadlines.find(d => d.companyId === co.id && d.reportType === 'Monthly Financials' && d.period === period);
+        if (!existing && isFuture(due)) {
+          deadlines.push({ id: 'd' + Date.now() + Math.random(), companyId: co.id, company: co.name,
+            reportType: 'Monthly Financials', period, dueDate,
+            graceDays: 0, receivedDate: null, status: 'Pending', noticesSent: 0, notes: '' });
+        }
+      }
+    }
+  }
+}
+
+function deleteCompany(id) {
+  const co = companies.find(c => c.id === id);
+  if (!co) return;
+  const coDls = deadlines.filter(d => d.companyId === id);
+  const msg = coDls.length > 0
+    ? `Move "${co.name}" and its ${coDls.length} deadline(s) to Trash? You can restore within 30 days.`
+    : `Move "${co.name}" to Trash? You can restore within 30 days.`;
+  if (!confirm(msg)) return;
+  trashBin.push({ type:'company', deletedAt: new Date().toISOString(), deletedBy: currentUser,
+    data: { company: co, deadlines: coDls } });
+  companies = companies.filter(c => c.id !== id);
+  deadlines = deadlines.filter(d => d.companyId !== id);
+  logActivity('deleted', `${co.name} moved to Trash (${coDls.length} deadline(s)).`);
+  saveData(); renderTracker(); updateAlertBanner(); renderSettings();
+  showToast(`${co.name} moved to Trash. Restore from the 🗑 Trash tab.`);
+}
+
+function saveDeadline() {
+  const editingId = document.getElementById('dl-editing-id').value;
+  const coId = parseInt(document.getElementById('dl-company').value);
+  const co = companies.find(c => c.id === coId);
+  if (!co) return;
+  const period = document.getElementById('dl-period-preview').textContent.trim();
+  const dueDate = document.getElementById('dl-due').value;
+  if (!period || !dueDate) { showToast('Period and due date are required.'); return; }
+
+  if (editingId) {
+    // Edit existing
+    const d = deadlines.find(x => x.id === editingId);
+    if (!d) return;
+    const oldPeriod = d.period;
+    d.companyId = coId;
+    d.company = co.name;
+    d.reportType = document.getElementById('dl-type').value;
+    d.period = period;
+    d.dueDate = dueDate;
+    d.graceDays = parseInt(document.getElementById('dl-grace').value) || 0;
+    d.status = document.getElementById('dl-status').value;
+    d.receivedDate = document.getElementById('dl-received').value || null;
+    d.notes = document.getElementById('dl-notes').value;
+    logActivity('edited', `${co.name} — ${d.reportType} ${period} deadline edited.`);
+    closeModal('add-deadline-modal');
+    saveData(); renderTracker(); updateAlertBanner();
+    showToast(`${co.name} · ${period} updated.`);
+  } else {
+    // Add new
+    const dl = {
+      id: 'd' + Date.now(),
+      companyId: coId,
+      company: co.name,
+      reportType: document.getElementById('dl-type').value,
+      period,
+      dueDate,
+      graceDays: parseInt(document.getElementById('dl-grace').value) || 0,
+      receivedDate: document.getElementById('dl-received').value || null,
+      status: document.getElementById('dl-status').value,
+      noticesSent: 0,
+      notes: document.getElementById('dl-notes').value
+    };
+    deadlines.push(dl);
+    closeModal('add-deadline-modal');
+    saveData(); renderTracker(); updateAlertBanner();
+    showToast(`Deadline added for ${co.name} · ${dl.period}.`);
+  }
+}
+
+function deleteDeadlineFromModal() {
+  const id = document.getElementById('dl-editing-id').value;
+  const d = deadlines.find(x => x.id === id);
+  if (!d) return;
+  if (!confirm(`Move "${d.reportType} – ${d.period}" for ${d.company} to Trash? You can restore within 30 days.`)) return;
+  trashBin.push({ type:'deadline', deletedAt: new Date().toISOString(), deletedBy: currentUser, data: { ...d } });
+  deadlines = deadlines.filter(x => x.id !== id);
+  logActivity('deleted', `${d.company} — ${d.reportType} ${d.period} moved to Trash.`);
+  closeModal('add-deadline-modal');
+  saveData(); renderTracker(); updateAlertBanner();
+  showToast(`Deadline moved to Trash. Restore from the 🗑 Trash tab.`);
+}
+
+// ─── EXPORT CSV ───────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Company','Report Type','Period','Due Date','Grace Days','Received Date','Status','Days Overdue','Notices Sent','Notes']];
+  deadlines.forEach(d => {
+    const status = computeStatus(d);
+    const due = parseDateStr(d.dueDate);
+    const late = due ? daysDiff(due, TODAY) : '';
+    rows.push([d.company, d.reportType, d.period, d.dueDate, d.graceDays, d.receivedDate || '', status, status === 'Overdue' ? late : '', d.noticesSent, d.notes]);
+  });
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `CCP_ReportingTracker_${TODAY.toISOString().split('T')[0]}.csv`;
+  a.click();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ─── USER IDENTITY ───────────────────────────────────────────────────────────
+function promptUserName() {
+  const input = document.getElementById('user-name-input');
+  if (input) input.value = currentUser || '';
+  document.getElementById('user-modal').classList.add('open');
+  setTimeout(() => { if (input) input.focus(); }, 100);
+}
+function saveUserName() {
+  const val = (document.getElementById('user-name-input').value || '').trim();
+  if (!val) { showToast('Please enter your name.'); return; }
+  currentUser = val;
+  try { localStorage.setItem('ccp_tracker_user', val); } catch(e) {}
+  document.getElementById('current-user-name').textContent = val;
+  closeUserModal();
+  showToast(`Welcome, ${val}.`);
+}
+function closeUserModal() {
+  document.getElementById('user-modal').classList.remove('open');
+}
+
+// ─── TRASH ────────────────────────────────────────────────────────────────────
+function renderTrash() {
+  const container = document.getElementById('trash-content');
+  // Expire items older than 30 days
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  trashBin = trashBin.filter(item => new Date(item.deletedAt) >= cutoff);
+  // Update tab badge
+  const tab = document.getElementById('trash-tab');
+  if (tab) tab.textContent = trashBin.length > 0 ? `🗑 Trash (${trashBin.length})` : '🗑 Trash';
+
+  if (!trashBin.length) {
+    container.innerHTML = '<div style="text-align:center;color:#8a9bb0;padding:40px;">Trash is empty. Deleted companies and deadlines appear here for 30 days.</div>';
+    return;
+  }
+  container.innerHTML = trashBin.slice().reverse().map((item, ri) => {
+    const realIdx = trashBin.length - 1 - ri;
+    const ts = new Date(item.deletedAt).toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const expiry = new Date(item.deletedAt); expiry.setDate(expiry.getDate() + 30);
+    const daysLeft = Math.ceil((expiry - new Date()) / 86400000);
+    if (item.type === 'company') {
+      const co = item.data.company;
+      const dls = item.data.deadlines || [];
+      return `<div style="background:#fff;border:1px solid var(--ccp-rule);padding:14px 16px;margin-bottom:8px;border-left:4px solid var(--negative);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">${co.name} <span style="font-size:10px;font-weight:400;color:#8a9bb0;margin-left:6px;">Company + ${dls.length} deadline(s)</span></div>
+          <div style="font-size:11px;color:#8a9bb0;margin-top:3px;">Deleted ${ts} by ${item.deletedBy || 'Unknown'} · ${daysLeft}d until permanent</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-icon btn-sm" onclick="restoreFromTrash(${realIdx})" style="border-color:var(--positive);color:var(--positive);">↩ Restore</button>
+          <button class="btn-icon btn-sm" onclick="permanentDelete(${realIdx})" style="border-color:#e0b0b0;color:var(--negative);">✕ Delete</button>
+        </div>
+      </div>`;
+    } else {
+      const d = item.data;
+      return `<div style="background:#fff;border:1px solid var(--ccp-rule);padding:14px 16px;margin-bottom:8px;border-left:4px solid var(--warning);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">${d.company} — ${d.reportType} <span style="font-size:11px;font-weight:400;color:#5a7090;">· ${d.period}</span></div>
+          <div style="font-size:11px;color:#8a9bb0;margin-top:3px;">Deleted ${ts} by ${item.deletedBy || 'Unknown'} · ${daysLeft}d until permanent</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-icon btn-sm" onclick="restoreFromTrash(${realIdx})" style="border-color:var(--positive);color:var(--positive);">↩ Restore</button>
+          <button class="btn-icon btn-sm" onclick="permanentDelete(${realIdx})" style="border-color:#e0b0b0;color:var(--negative);">✕ Delete</button>
+        </div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function restoreFromTrash(idx) {
+  const item = trashBin[idx];
+  if (!item) return;
+  if (item.type === 'company') {
+    const co = item.data.company;
+    if (companies.find(c => c.id === co.id)) { showToast('A company with this ID already exists.'); return; }
+    companies.push(co);
+    (item.data.deadlines || []).forEach(d => deadlines.push(d));
+    logActivity('restored', `${co.name} restored from Trash.`);
+    showToast(`${co.name} restored.`);
+  } else {
+    const d = item.data;
+    if (deadlines.find(x => x.id === d.id)) { showToast('This deadline already exists.'); return; }
+    deadlines.push(d);
+    logActivity('restored', `${d.company} — ${d.reportType} ${d.period} restored from Trash.`);
+    showToast(`${d.period} restored for ${d.company}.`);
+  }
+  trashBin.splice(idx, 1);
+  saveData(); renderTrash(); renderTracker(); updateAlertBanner();
+}
+
+function permanentDelete(idx) {
+  const item = trashBin[idx];
+  if (!item) return;
+  const label = item.type === 'company' ? item.data.company.name : `${item.data.company} – ${item.data.period}`;
+  if (!confirm(`Permanently delete "${label}"? This cannot be undone.`)) return;
+  trashBin.splice(idx, 1);
+  saveData(); renderTrash();
+  showToast(`Permanently deleted.`);
+}
+
+function emptyTrash() {
+  if (!trashBin.length) { showToast('Trash is already empty.'); return; }
+  if (!confirm(`Permanently delete all ${trashBin.length} item(s) in Trash? This cannot be undone.`)) return;
+  trashBin = [];
+  saveData(); renderTrash();
+  showToast('Trash emptied.');
+}
+
+// ─── EXPORT / IMPORT / BACKUPS ────────────────────────────────────────────────
+function openDataModal() {
+  renderBackupList();
+  document.getElementById('data-modal').classList.add('open');
+}
+
+function exportJSON() { saveToFile(); }
+
+
+// ─── CUSTOM CONFIRM (avoids browser confirm() issues) ───────────────────────
+let _spConfirmResolve = null;
+function spConfirm(msg) {
+  return new Promise(function(resolve) {
+    document.getElementById('sp-confirm-msg').textContent = msg;
+    var yesBtn = document.getElementById('sp-confirm-yes');
+    if (yesBtn) {
+      yesBtn.style.background = /delete|clear|remove|permanently/i.test(msg) ? 'var(--negative)' : '';
+      yesBtn.textContent = /delete|clear|remove|permanently/i.test(msg) ? 'Yes, Delete' : 'Yes, Continue';
+    }
+    document.getElementById('sp-confirm-modal').classList.add('open');
+    _spConfirmResolve = resolve;
+  });
+}
+function spConfirmResolve(result) {
+  document.getElementById('sp-confirm-modal').classList.remove('open');
+  if (_spConfirmResolve) { _spConfirmResolve(result); _spConfirmResolve = null; }
+}
+
+// ─── NORMALIZE DUE DATES ──────────────────────────────────────────────────────
+// Adjust every deadline that falls on a weekend or US holiday to the prior
+// business day. Runs on every page load so saved dates are always corrected.
+function normalizeDueDates() {
+  deadlines.forEach(d => {
+    if (!d.dueDate) return;
+    const due = parseDateStr(d.dueDate);
+    if (!due) return;
+    if (due.getDay() === 0 || due.getDay() === 6 || isHoliday(due)) {
+      d.dueDate = bizDay(due);
+    }
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('tracker-date').textContent = TODAY.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+document.getElementById('footer-date').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+// Close calendar dropdown when clicking outside it
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('cal-filter-wrap');
+  const dd = document.getElementById('cal-filter-dropdown');
+  if (dd && wrap && !wrap.contains(e.target)) dd.style.display = 'none';
+});
+
+// Load user identity
+try { currentUser = localStorage.getItem('ccp_tracker_user') || ''; } catch(e) {}
+if (currentUser) {
+  document.getElementById('current-user-name').textContent = currentUser;
+} else {
+  // Show user prompt after a short delay so the page renders first
+  setTimeout(promptUserName, 400);
+}
+
+// ─── FIREBASE BOOT ───────────────────────────────────────────────────────────
+document.getElementById('tracker-date').textContent =
+  TODAY.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+document.getElementById('footer-date').textContent =
+  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+// Load user identity from localStorage (persists between sessions)
+try { currentUser = localStorage.getItem('ccp_tracker_user') || ''; } catch(e) {}
+if (currentUser) {
+  var badge = document.getElementById('current-user-name');
+  if (badge) badge.textContent = currentUser;
+} else {
+  setTimeout(promptUserName, 400);
+}
+
+// Connect to Firestore
+var ind = document.getElementById('save-indicator');
+if (firebaseConfig.apiKey === 'PASTE_API_KEY_HERE') {
+  // Config not filled in yet — show helpful message
+  if (ind) { ind.textContent = '● Firebase not configured'; ind.style.color = 'var(--negative)'; }
+  showToast('Please paste your Firebase config into the ccp_tracker_firebase.html file. See the setup guide.');
+} else {
+  if (ind) { ind.textContent = '● Connecting to Firebase...'; ind.style.color = '#0078d4'; }
+  fbRead().then(function() {
+    // First ever load — seed with sample data if Firestore is empty
+    if (companies.length === 0) {
+      return fbWrite();
+    }
+  }).then(function() {
+    normalizeDueDates();
+    checkAllDeadlines();
+    startListeners(); // start real-time listeners
+    var tab = document.getElementById('trash-tab');
+    if (tab && trashBin.length > 0) tab.textContent = 'Trash (' + trashBin.length + ')';
+  }).catch(function(e) {
+    console.error('Firebase connection error:', e);
+    // Fall back to localStorage backup
+    try {
+      var backup = localStorage.getItem('ccp_fb_backup');
+      if (backup) applySnapshot(JSON.parse(backup));
+    } catch(e2) {}
+    normalizeDueDates(); checkAllDeadlines();
+    if (ind) { ind.textContent = '● Firebase error — using local backup'; ind.style.color = 'var(--negative)'; }
+    showToast('Firebase connection failed: ' + e.message);
+  });
+}
+</script>
+</body>
+</html>
